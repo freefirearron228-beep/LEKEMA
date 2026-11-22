@@ -1,0 +1,45 @@
+:root {
+    --bg-main: #0a0a0a;
+    --bg-card: #141414;
+    --accent-color: #FACC15;
+    --accent-text: #000000;
+    --text-main: #FFFFFF;
+}
+
+.font-lekema {
+    font-family: 'Cinzel', serif;
+    letter-spacing: 2px;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    transition: background 0.3s ease;
+}
+
+.bg-accent {
+    background-color: var(--accent-color);
+    color: var(--accent-text);
+}
+
+.text-accent {
+    color: var(--accent-color);
+}
+
+.border-accent {
+    border-color: var(--accent-color);
+}
+
+.bg-card {
+    background-color: var(--bg-card);
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+.rec-dot {
+    animation: pulse-dot 1s infinite;
+}
