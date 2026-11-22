@@ -65,23 +65,24 @@
     <!-- APPLICATION PRINCIPALE -->
     <div id="main-app" class="hidden h-full flex flex-col">
 
-        <!-- EN-TÊTE -->
-        <header class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <img src="./file_00000000227881f48510b7ce45188ed5.png" alt="Logo LEKEMA" class="w-9 h-9 rounded-full object-cover border border-yellow-400/50 shrink-0">
-                <button type="button" onclick="openProfileModal()" id="header-avatar" class="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-black text-xs shrink-0">M</button>
-                <div>
-                    <h2 class="font-bold text-sm leading-tight">LEKEMA</h2>
-                    <span id="rec-badge-global" class="hidden text-[10px] text-red-400 font-semibold">Vocal en pause</span>
-                </div>
+        <!-- EN-TÊTE (NOM CENTRÉ AU MILIEU) -->
+        <header class="bg-card border-b border-gray-800 px-3 py-3 grid grid-cols-3 items-center">
+            <div class="flex items-center space-x-2 justify-start">
+                <button type="button" onclick="openProfilePage()" class="flex items-center space-x-2" aria-label="Ouvrir le profil">
+                    <img id="header-profile-photo" src="./file_00000000227881f48510b7ce45188ed5.png" alt="Profil LEKEMA" class="w-9 h-9 rounded-full object-cover border border-yellow-400/50 shrink-0">
+                    <span id="header-avatar" class="w-7 h-7 rounded-full bg-accent flex items-center justify-center font-black text-xs shrink-0">M</span>
+                </button>
             </div>
 
-            <div class="flex items-center space-x-2">
-                <button type="button" onclick="openThemeModal()" class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
-                <label class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold cursor-pointer">
-                    Fond
-                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
-                </label>
+            <div class="text-center truncate">
+                <h2 id="header-center-title" class="font-bold text-sm leading-tight truncate">LEKEMA</h2>
+                <span id="header-online-status" class="text-[10px] text-emerald-400 font-semibold block">En ligne</span>
+                <span id="rec-badge-global" class="hidden text-[10px] text-red-400 font-semibold">Vocal en pause</span>
+            </div>
+
+            <div class="flex items-center space-x-1.5 justify-end">
+                <button type="button" onclick="openSettingsPage()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Paramètres</button>
+                <button type="button" onclick="openThemeModal()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
             </div>
         </header>
 
@@ -95,16 +96,19 @@
         <main id="tab-chats" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-bold text-gray-300">Discussions</h3>
+                <button type="button" onclick="openContactsModal()" class="px-3 py-1.5 rounded-xl bg-accent text-xs font-bold">Contacts</button>
             </div>
 
-            <div onclick="openChat('Sarah K.', 'En ligne')" class="bg-card border border-gray-800 rounded-2xl p-3.5 flex items-center space-x-3 cursor-pointer">
-                <div class="w-11 h-11 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">S</div>
-                <div class="flex-1">
-                    <div class="flex justify-between items-center">
-                        <p class="font-bold text-sm">Sarah K.</p>
-                        <span class="text-[10px] text-gray-400">Maintenant</span>
+            <div id="contacts-chat-list" class="space-y-2.5">
+                <div onclick="openChat('Sarah K.', 'En ligne')" class="bg-card border border-gray-800 rounded-2xl p-3.5 flex items-center space-x-3 cursor-pointer">
+                    <div class="w-11 h-11 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">S</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <p class="font-bold text-sm">Sarah K.</p>
+                            <span class="text-[10px] text-gray-400">Maintenant</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Appuie pour discuter...</p>
                     </div>
-                    <p class="text-xs text-gray-400">Appuie pour discuter...</p>
                 </div>
             </div>
         </main>
@@ -169,6 +173,128 @@
                 <span class="text-[11px]">Live</span>
             </button>
         </nav>
+    </div>
+
+    <!-- ÉCRAN PROFIL COMPLET -->
+    <div id="profile-page" class="hidden fixed inset-0 bg-[#0d0d0d] z-40 flex flex-col overflow-y-auto">
+        <div class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+            <button type="button" onclick="closeProfilePage()" class="text-lg font-bold">←</button>
+            <h2 class="font-bold text-sm">Profil</h2>
+            <button type="button" onclick="saveProfileDetails()" class="text-xs font-bold text-accent">Enregistrer</button>
+        </div>
+
+        <div class="p-5 space-y-5 max-w-md w-full mx-auto">
+            <div class="flex flex-col items-center">
+                <div class="relative">
+                    <img id="profile-page-avatar-img" src="./file_00000000227881f48510b7ce45188ed5.png" alt="Photo de profil" class="w-28 h-28 rounded-full object-cover border-2 border-yellow-400 shadow-xl">
+                    <label class="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center cursor-pointer shadow-lg" aria-label="Changer la photo de profil">
+                        📷
+                        <input type="file" accept="image/*" onchange="changeProfilePhoto(event)" class="hidden">
+                    </label>
+                </div>
+                <p id="profile-save-feedback" class="hidden text-xs text-emerald-400 mt-2 font-semibold">Profil enregistré</p>
+            </div>
+
+            <div class="space-y-3 bg-card border border-gray-800 rounded-2xl p-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Nom</label>
+                    <input type="text" id="profile-name-input" placeholder="Ton nom affiché" class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Infos</label>
+                    <input type="text" id="profile-info-input" placeholder="Disponible sur LEKEMA" class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Nom de profil réservé (@pseudo)</label>
+                    <input type="text" id="profile-handle-input" placeholder="@malik_lekema" class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Téléphone</label>
+                    <input type="tel" id="profile-phone-input" placeholder="+228 90 00 00 00" class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Liens</label>
+                    <input type="text" id="profile-links-input" placeholder="Ajouter un lien (Instagram, site...)" class="w-full bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-yellow-400">
+                </div>
+            </div>
+
+            <button type="button" onclick="logoutUser()" class="w-full py-3 rounded-xl bg-red-600/20 border border-red-500/40 text-red-400 font-bold text-xs">
+                Déconnexion
+            </button>
+        </div>
+    </div>
+
+    <!-- ÉCRAN PARAMÈTRES & CONFIDENTIALITÉ -->
+    <div id="settings-page" class="hidden fixed inset-0 bg-[#0d0d0d] z-40 flex flex-col overflow-y-auto">
+        <div class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+            <button type="button" onclick="closeSettingsPage()" class="text-lg font-bold">←</button>
+            <h2 class="font-bold text-sm">Paramètres &amp; Confidentialité</h2>
+            <span class="text-xs text-accent font-semibold">Sécurité</span>
+        </div>
+
+        <div class="p-4 space-y-4 max-w-md w-full mx-auto">
+            <div class="bg-card border border-gray-800 rounded-2xl p-4 space-y-4">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Confidentialité &amp; Présence</h3>
+
+                <label class="flex items-center justify-between cursor-pointer">
+                    <div>
+                        <p class="text-sm font-semibold">Présence en ligne</p>
+                        <p class="text-[11px] text-gray-400">Afficher quand tu es actif sur LEKEMA</p>
+                    </div>
+                    <input type="checkbox" id="setting-online-presence" onchange="savePrivacySettings()" class="w-5 h-5 accent-yellow-400">
+                </label>
+
+                <label class="flex items-center justify-between cursor-pointer">
+                    <div>
+                        <p class="text-sm font-semibold">Confirmations de lecture (✓✓)</p>
+                        <p class="text-[11px] text-gray-400">Afficher l'état envoyé, reçu et lu sur tes messages</p>
+                    </div>
+                    <input type="checkbox" id="setting-read-receipts" onchange="savePrivacySettings()" class="w-5 h-5 accent-yellow-400">
+                </label>
+            </div>
+
+            <div class="bg-card border border-gray-800 rounded-2xl p-4 space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Personnalisation &amp; Contacts</h3>
+                <label class="w-full py-2.5 px-3 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold flex items-center justify-between cursor-pointer">
+                    <span>Changer le fond de l'application</span>
+                    <span>🖼️</span>
+                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
+                </label>
+                <button type="button" onclick="closeSettingsPage(); openContactsModal();" class="w-full py-2.5 px-3 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold flex items-center justify-between">
+                    <span>Sélectionner / Ajouter un contact</span>
+                    <span>👥</span>
+                </button>
+                <button type="button" onclick="closeSettingsPage(); openThemeModal();" class="w-full py-2.5 px-3 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold flex items-center justify-between">
+                    <span>Thème de l'application</span>
+                    <span>🎨</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SÉLECTIONNER / AJOUTER UN CONTACT -->
+    <div id="contacts-modal" class="hidden fixed inset-0 bg-[#0d0d0d] z-40 flex flex-col">
+        <div class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+            <button type="button" onclick="closeContactsModal()" class="text-lg font-bold">←</button>
+            <h2 class="font-bold text-sm">Sélectionner un contact</h2>
+            <span class="text-xs text-gray-400">LEKEMA</span>
+        </div>
+
+        <div class="p-4 space-y-3 overflow-y-auto flex-1">
+            <div class="bg-card border border-gray-800 rounded-2xl p-3 space-y-2">
+                <p class="text-xs font-bold text-gray-300">Nouveau contact</p>
+                <div class="flex space-x-2">
+                    <input type="text" id="new-contact-name" placeholder="Nom ou @pseudo" class="flex-1 bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-400">
+                    <button type="button" onclick="addNewContact()" class="bg-accent px-4 py-2 rounded-xl text-xs font-bold">Ajouter</button>
+                </div>
+            </div>
+
+            <div id="contacts-picker-list" class="space-y-2"></div>
+        </div>
     </div>
 
     <!-- SALLE DE CHAT -->
@@ -296,23 +422,6 @@
 
                 <div class="w-11 h-11"></div>
             </div>
-        </div>
-    </div>
-
-    <!-- MODAL PROFIL & DÉCONNEXION -->
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-card border border-gray-800 rounded-2xl p-5 w-full max-w-sm space-y-4">
-            <div class="flex items-center space-x-3">
-                <div id="profile-modal-avatar" class="w-11 h-11 rounded-full bg-accent flex items-center justify-center font-black text-base">M</div>
-                <div>
-                    <h3 id="profile-modal-name" class="font-bold text-sm">Malik</h3>
-                    <p id="profile-modal-gmail" class="text-xs text-gray-400">Compte connecté</p>
-                </div>
-            </div>
-            <button type="button" onclick="logoutUser()" class="w-full py-2.5 rounded-xl bg-red-600/20 border border-red-500/40 text-red-400 font-bold text-xs">
-                Déconnexion
-            </button>
-            <button type="button" onclick="closeProfileModal()" class="w-full py-2 text-xs text-gray-400">Fermer</button>
         </div>
     </div>
 
