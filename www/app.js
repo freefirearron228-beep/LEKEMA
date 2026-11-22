@@ -330,6 +330,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch (err) {}
 
     renderEmojiGrid();
+    updateBrushVisualState();
     updateChatActionButton();
 
     if ('serviceWorker' in navigator) {
@@ -405,6 +406,19 @@ function insertEmoji(emoji) {
     updateChatActionButton();
 }
 
+function toggleEditorEmojiBar() {
+    const bar = document.getElementById('editor-emoji-bar');
+    if (!bar) return;
+    bar.classList.toggle('hidden');
+}
+
+function insertEditorEmoji(emoji) {
+    const inp = document.getElementById('media-caption');
+    if (!inp) return;
+    inp.value = (inp.value || '') + emoji;
+    inp.focus();
+}
+
 function toggleAttachMenu() {
     const menu = document.getElementById('attach-menu-bar');
     const picker = document.getElementById('emoji-picker-bar');
@@ -449,8 +463,10 @@ let camCaptureStream = null;
 let camMediaRecorder = null;
 let camVideoChunks = [];
 let isRecordingCamVideo = false;
+let isPausedCamVideo = false;
 let camRecSeconds = 0;
 let camRecTimerInterval = null;
+let shouldOpenEditorOnStop = false;
 
 async function openCameraCaptureModal() {
     const menu = document.getElementById('attach-menu-bar');
@@ -466,7 +482,11 @@ async function openCameraCaptureModal() {
 }
 
 async function startCameraStream() {
-    stopCameraStream();
+    if (camCaptureStream) {
+        camCaptureStream.getTracks().forEach(t => t.stop());
+        camCaptureStream = null;
+    }
+
     try {
         const permitted = await ensureCameraPermission();
         if (!permitted) {
@@ -499,14 +519,22 @@ async function startCameraStream() {
     }
 }
 
-function stopCameraStream() {
+function stopCameraTimersAndStream() {
     if (camRecTimerInterval) {
         clearInterval(camRecTimerInterval);
         camRecTimerInterval = null;
     }
     isRecordingCamVideo = false;
-    const timerEl = document.getElementById('cam-rec-timer');
-    if (timerEl) timerEl.classList.add('hidden');
+    isPausedCamVideo = false;
+    camRecSeconds = 0;
+
+    const hud = document.getElementById('cam-rec-hud');
+    const pauseBtn = document.getElementById('pause-video-rec-btn');
+    if (hud) hud.classList.add('hidden');
+    if (pauseBtn) {
+        pauseBtn.classList.add('hidden');
+        pauseBtn.innerText = "⏸️ Pause";
+    }
 
     if (camCaptureStream) {
         camCaptureStream.getTracks().forEach(t => t.stop());
@@ -515,10 +543,11 @@ function stopCameraStream() {
 }
 
 function closeCameraCaptureModal() {
+    shouldOpenEditorOnStop = false;
     if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
         try { camMediaRecorder.stop(); } catch (e) {}
     }
-    stopCameraStream();
+    stopCameraTimersAndStream();
     const modal = document.getElementById('camera-capture-modal');
     if (modal) modal.classList.add('hidden');
 }
@@ -553,9 +582,24 @@ async function setCameraCaptureMode(mode) {
 }
 
 async function switchCameraFacing() {
-    if (isRecordingCamVideo) return;
     camFacingMode = camFacingMode === 'environment' ? 'user' : 'environment';
+
+    if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state === 'recording') {
+        try {
+            if (typeof camMediaRecorder.pause === 'function') camMediaRecorder.pause();
+            isPausedCamVideo = true;
+            const pauseBtn = document.getElementById('pause-video-rec-btn');
+            if (pauseBtn) pauseBtn.innerText = "▶️ Reprendre";
+        } catch (e) {}
+    }
+
     await startCameraStream();
+
+    if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state === 'paused' && !isPausedCamVideo) {
+        try {
+            if (typeof camMediaRecorder.resume === 'function') camMediaRecorder.resume();
+        } catch (e) {}
+    }
 }
 
 function handleCameraShutter() {
@@ -581,9 +625,34 @@ function takePhotoFromStream() {
     openEditorWithImageData(dataUrl);
 }
 
+function togglePauseVideoRecording() {
+    if (!camMediaRecorder || !isRecordingCamVideo) return;
+    const pauseBtn = document.getElementById('pause-video-rec-btn');
+    const dot = document.getElementById('cam-rec-dot');
+
+    if (!isPausedCamVideo && camMediaRecorder.state === 'recording') {
+        if (typeof camMediaRecorder.pause === 'function') {
+            camMediaRecorder.pause();
+            isPausedCamVideo = true;
+            if (pauseBtn) pauseBtn.innerText = "▶️ Reprendre";
+            if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-yellow-400";
+        }
+    } else if (isPausedCamVideo && camMediaRecorder.state === 'paused') {
+        if (typeof camMediaRecorder.resume === 'function') {
+            camMediaRecorder.resume();
+            isPausedCamVideo = false;
+            if (pauseBtn) pauseBtn.innerText = "⏸️ Pause";
+            if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse";
+        }
+    }
+}
+
 function toggleVideoCaptureFromStream() {
     const shutterBtn = document.getElementById('shutter-action-btn');
+    const hud = document.getElementById('cam-rec-hud');
     const timerEl = document.getElementById('cam-rec-timer');
+    const pauseBtn = document.getElementById('pause-video-rec-btn');
+    const dot = document.getElementById('cam-rec-dot');
 
     if (!isRecordingCamVideo) {
         if (!camCaptureStream) return;
@@ -593,36 +662,59 @@ function toggleVideoCaptureFromStream() {
             alert("Enregistrement vidéo non supporté, utilisez la galerie.");
             return;
         }
+
         camVideoChunks = [];
+        shouldOpenEditorOnStop = true;
+        isPausedCamVideo = false;
+
         camMediaRecorder.ondataavailable = e => {
             if (e.data && e.data.size > 0) camVideoChunks.push(e.data);
         };
+
         camMediaRecorder.onstop = () => {
+            const shouldOpen = shouldOpenEditorOnStop;
             const blob = new Blob(camVideoChunks, { type: 'video/webm' });
             const url = URL.createObjectURL(blob);
-            closeCameraCaptureModal();
-            openEditorWithVideoUrl(url);
+
+            if (shutterBtn) {
+                shutterBtn.className = "w-16 h-16 rounded-full border-4 border-white bg-red-600 flex items-center justify-center shadow-xl active:scale-95 transition";
+            }
+            stopCameraTimersAndStream();
+            const modal = document.getElementById('camera-capture-modal');
+            if (modal) modal.classList.add('hidden');
+
+            if (shouldOpen && blob.size > 0) {
+                openEditorWithVideoUrl(url);
+            }
         };
 
         camMediaRecorder.start(250);
         isRecordingCamVideo = true;
         camRecSeconds = 0;
-        if (timerEl) {
-            timerEl.innerText = "00:00";
-            timerEl.classList.remove('hidden');
+
+        if (hud) hud.classList.remove('hidden');
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+        if (timerEl) timerEl.innerText = "00:00";
+        if (pauseBtn) {
+            pauseBtn.classList.remove('hidden');
+            pauseBtn.innerText = "⏸️ Pause";
         }
         if (shutterBtn) {
             shutterBtn.className = "w-16 h-16 rounded-2xl border-4 border-white bg-red-600 flex items-center justify-center shadow-xl transition";
         }
+
         camRecTimerInterval = setInterval(() => {
-            camRecSeconds++;
-            if (timerEl) {
-                const m = String(Math.floor(camRecSeconds / 60)).padStart(2, '0');
-                const s = String(camRecSeconds % 60).padStart(2, '0');
-                timerEl.innerText = `${m}:${s}`;
+            if (isRecordingCamVideo && !isPausedCamVideo) {
+                camRecSeconds++;
+                if (timerEl) {
+                    const m = String(Math.floor(camRecSeconds / 60)).padStart(2, '0');
+                    const s = String(camRecSeconds % 60).padStart(2, '0');
+                    timerEl.innerText = `${m}:${s}`;
+                }
             }
         }, 1000);
     } else {
+        shouldOpenEditorOnStop = true;
         if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
             camMediaRecorder.stop();
         }
@@ -633,10 +725,18 @@ function openEditorWithImageData(dataUrl) {
     if (!ctx) return;
     currentMediaType = 'image';
     document.getElementById('media-caption').value = '';
+    document.getElementById('editor-emoji-bar').classList.add('hidden');
     document.getElementById('media-editor-modal').classList.remove('hidden');
-    document.getElementById('preview-video').classList.add('hidden');
+    const vid = document.getElementById('preview-video');
+    if (vid) {
+        vid.pause();
+        vid.currentTime = 0;
+        vid.src = '';
+        vid.classList.add('hidden');
+    }
     canvas.classList.remove('hidden');
     document.getElementById('brush-tools').classList.remove('hidden');
+    updateBrushVisualState();
     baseImage.onload = () => {
         canvas.width = baseImage.width;
         canvas.height = baseImage.height;
@@ -649,12 +749,16 @@ function openEditorWithVideoUrl(videoUrl) {
     currentMediaType = 'video';
     currentVideoUrl = videoUrl;
     document.getElementById('media-caption').value = '';
+    document.getElementById('editor-emoji-bar').classList.add('hidden');
     document.getElementById('media-editor-modal').classList.remove('hidden');
     if (canvas) canvas.classList.add('hidden');
     document.getElementById('brush-tools').classList.add('hidden');
     const vid = document.getElementById('preview-video');
-    vid.src = currentVideoUrl;
-    vid.classList.remove('hidden');
+    if (vid) {
+        vid.src = currentVideoUrl;
+        vid.currentTime = 0;
+        vid.classList.remove('hidden');
+    }
 }
 
 function updateChatActionButton() {
@@ -1078,9 +1182,54 @@ if (canvas && ctx) {
     canvas.addEventListener('touchend', () => { isDrawing = false; });
 }
 
-function setBrushColor(c) { brushColor = c; }
-function clearCanvas() { if (ctx) ctx.drawImage(baseImage, 0, 0); }
-function closeMediaEditor() { document.getElementById('media-editor-modal').classList.add('hidden'); }
+function updateBrushVisualState() {
+    const map = [
+        { color: '#000000', id: 'color-btn-black' },
+        { color: '#ef4444', id: 'color-btn-red' },
+        { color: '#facc15', id: 'color-btn-yellow' }
+    ];
+    map.forEach(item => {
+        const btn = document.getElementById(item.id);
+        if (!btn) return;
+        if (brushColor.toLowerCase() === item.color.toLowerCase()) {
+            btn.classList.add('ring-2', 'ring-white', 'scale-125', 'opacity-100');
+            btn.classList.remove('opacity-80');
+        } else {
+            btn.classList.remove('ring-2', 'ring-white', 'scale-125', 'opacity-100');
+            btn.classList.add('opacity-80');
+        }
+    });
+}
+
+function setBrushColor(c) {
+    brushColor = c;
+    updateBrushVisualState();
+}
+
+function clearCanvas() {
+    if (ctx && baseImage.complete && baseImage.naturalWidth > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(baseImage, 0, 0);
+    }
+}
+
+function stopAndResetEditorVideo() {
+    const vid = document.getElementById('preview-video');
+    if (vid) {
+        vid.pause();
+        vid.currentTime = 0;
+        vid.removeAttribute('src');
+        vid.load();
+        vid.classList.add('hidden');
+    }
+}
+
+function closeMediaEditor() {
+    stopAndResetEditorVideo();
+    const emojiBar = document.getElementById('editor-emoji-bar');
+    if (emojiBar) emojiBar.classList.add('hidden');
+    document.getElementById('media-editor-modal').classList.add('hidden');
+}
 
 function confirmMediaSend() {
     const caption = document.getElementById('media-caption').value.trim();
@@ -1092,7 +1241,8 @@ function confirmMediaSend() {
         const url = canvas.toDataURL('image/jpeg', 0.85);
         div.innerHTML = `<div onclick="openViewer('image', '${url}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
     } else {
-        div.innerHTML = `<div onclick="openViewer('video', '${currentVideoUrl}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${currentVideoUrl}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
+        const videoToSend = currentVideoUrl;
+        div.innerHTML = `<div onclick="openViewer('video', '${videoToSend}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${videoToSend}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
     }
     area.appendChild(div);
     area.scrollTop = area.scrollHeight;
@@ -1104,17 +1254,29 @@ function openViewer(type, src, caption) {
     const vid = document.getElementById('viewer-vid');
     document.getElementById('viewer-caption').innerText = caption || '';
     if (type === 'image') {
-        vid.classList.add('hidden'); vid.pause();
-        img.src = src; img.classList.remove('hidden');
+        vid.classList.add('hidden');
+        vid.pause();
+        vid.currentTime = 0;
+        img.src = src;
+        img.classList.remove('hidden');
     } else {
         img.classList.add('hidden');
-        vid.src = src; vid.classList.remove('hidden'); vid.play();
+        vid.src = src;
+        vid.currentTime = 0;
+        vid.classList.remove('hidden');
+        vid.play().catch(() => {});
     }
     document.getElementById('fullscreen-viewer').classList.remove('hidden');
 }
 
 function closeViewer() {
-    document.getElementById('viewer-vid').pause();
+    const vid = document.getElementById('viewer-vid');
+    if (vid) {
+        vid.pause();
+        vid.currentTime = 0;
+        vid.removeAttribute('src');
+        vid.load();
+    }
     document.getElementById('fullscreen-viewer').classList.add('hidden');
 }
 
