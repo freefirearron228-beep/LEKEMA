@@ -501,6 +501,16 @@ let camRecSeconds = 0;
 let camRecTimerInterval = null;
 let shouldOpenEditorOnStop = false;
 
+function applyCameraPreviewMirror() {
+    const vid = document.getElementById('capture-video-preview');
+    if (!vid) return;
+    if (camFacingMode === 'user') {
+        vid.style.transform = 'scaleX(-1)';
+    } else {
+        vid.style.transform = 'scaleX(1)';
+    }
+}
+
 async function openCameraCaptureModal() {
     const menu = document.getElementById('attach-menu-bar');
     const picker = document.getElementById('emoji-picker-bar');
@@ -534,8 +544,8 @@ async function startCameraStream() {
         }
 
         const constraints = camCaptureMode === 'video'
-            ? { video: { facingMode: camFacingMode }, audio: true }
-            : { video: { facingMode: camFacingMode }, audio: false };
+            ? { video: { facingMode: { ideal: camFacingMode } }, audio: true }
+            : { video: { facingMode: { ideal: camFacingMode } }, audio: false };
 
         try {
             camCaptureStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -546,6 +556,7 @@ async function startCameraStream() {
         const vid = document.getElementById('capture-video-preview');
         if (vid) {
             vid.srcObject = camCaptureStream;
+            applyCameraPreviewMirror();
             vid.play().catch(() => {});
         }
     } catch (err) {
@@ -613,6 +624,8 @@ async function setCameraCaptureMode(mode) {
             : "w-16 h-16 rounded-full border-4 border-white bg-white flex items-center justify-center shadow-xl active:scale-95 transition";
     }
 
+    applyCameraPreviewMirror();
+
     if (camCaptureStream) {
         await startCameraStream();
     }
@@ -677,6 +690,7 @@ function createAndStartVideoSegmentRecorder() {
 
 async function switchCameraFacing() {
     camFacingMode = camFacingMode === 'environment' ? 'user' : 'environment';
+    applyCameraPreviewMirror();
 
     if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state !== 'inactive') {
         isSwitchingCameraDuringRec = true;
@@ -708,7 +722,15 @@ function takePhotoFromStream() {
     snapCanvas.width = vid.videoWidth;
     snapCanvas.height = vid.videoHeight;
     const sctx = snapCanvas.getContext('2d');
+
+    sctx.save();
+    if (camFacingMode === 'user') {
+        sctx.translate(snapCanvas.width, 0);
+        sctx.scale(-1, 1);
+    }
     sctx.drawImage(vid, 0, 0, snapCanvas.width, snapCanvas.height);
+    sctx.restore();
+
     const dataUrl = snapCanvas.toDataURL('image/jpeg', 0.88);
 
     closeCameraCaptureModal();
