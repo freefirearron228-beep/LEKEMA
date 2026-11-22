@@ -36,6 +36,29 @@ jobs:
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const logoSrc = "www/file_00000000227881f48510b7ce45188ed5.png";
+            const resDir = "android/app/src/main/res";
+            if (fs.existsSync(logoSrc) && fs.existsSync(resDir)) {
+              const logoBytes = fs.readFileSync(logoSrc);
+              const dirs = fs.readdirSync(resDir).filter(d => d.startsWith("mipmap"));
+              for (const d of dirs) {
+                const fullDir = path.join(resDir, d);
+                const files = fs.readdirSync(fullDir);
+                for (const f of files) {
+                  if (f.startsWith("ic_launcher") && (f.endsWith(".png") || f.endsWith(".webp"))) {
+                    const outFile = path.join(fullDir, f.replace(/\.webp$/, ".png"));
+                    if (f.endsWith(".webp")) {
+                      fs.unlinkSync(path.join(fullDir, f));
+                    }
+                    fs.writeFileSync(outFile, logoBytes);
+                  }
+                }
+              }
+            }
+          '
           npx cap sync android
           node -e '
             const fs = require("fs");
