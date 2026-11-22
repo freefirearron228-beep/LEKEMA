@@ -352,16 +352,17 @@
         </div>
     </div>
 
-    <!-- VISIONNEUSE PLEIN ÉCRAN -->
+    <!-- VISIONNEUSE PLEIN ÉCRAN (PINCH-TO-ZOOM + DOUBLE-TAP) -->
     <div id="fullscreen-viewer" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
-        <div class="flex justify-end">
-            <button type="button" onclick="closeViewer()" class="text-white font-bold text-lg px-3 py-1">✕</button>
+        <div class="flex justify-between items-center z-20">
+            <button type="button" id="reset-zoom-btn" onclick="resetViewerZoom()" class="hidden bg-black/70 text-white text-xs font-semibold px-3 py-1 rounded-full">1x</button>
+            <button type="button" onclick="closeViewer()" class="text-white font-bold text-lg px-3 py-1 ml-auto">✕</button>
         </div>
-        <div class="flex-1 flex items-center justify-center">
-            <img id="viewer-img" class="hidden max-w-full max-h-full rounded-xl object-contain">
+        <div id="viewer-stage" class="flex-1 flex items-center justify-center overflow-hidden touch-none relative">
+            <img id="viewer-img" class="hidden max-w-full max-h-full rounded-xl object-contain select-none will-change-transform">
             <video id="viewer-vid" controls class="hidden max-w-full max-h-full rounded-xl"></video>
         </div>
-        <p id="viewer-caption" class="text-center text-sm text-white mt-2"></p>
+        <p id="viewer-caption" class="text-center text-sm text-white mt-2 z-20"></p>
     </div>
 
     <!-- MODAL LIVE -->
