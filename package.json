@@ -1,0 +1,17 @@
+{
+  "name": "lekema-app",
+  "version": "1.0.0",
+  "description": "LEKEMA - Messagerie securisee par Gmail, Statuts et Live",
+  "private": true,
+  "scripts": {
+    "cap:add:android": "cap add android",
+    "cap:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
