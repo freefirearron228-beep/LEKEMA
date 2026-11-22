@@ -5,6 +5,35 @@ const EMAILJS_CONFIG = {
     TEMPLATE_ID: "TON_TEMPLATE_ID"
 };
 
+const EMOJI_CATEGORIES = {
+    faces: [
+        "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘",
+        "😗", "😚", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑",
+        "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮",
+        "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮",
+        "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓"
+    ],
+    hearts: [
+        "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗",
+        "💖", "💘", "💝", "💟", "💯", "💢", "💥", "💫", "💦", "💨", "🕳️", "💣", "💬", "👁️‍🗨️", "🗨️", "🗯️",
+        "💭", "💤", "✨", "🌟", "⭐", "🔥", "☀️", "🌙", "⚡", "🌈", "🎵", "🎶", "🔔", "🔕", "💎", "👑"
+    ],
+    gestures: [
+        "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆",
+        "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✍️",
+        "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "👶", "🧒", "👦", "👧", "🧑", "👱", "👨", "👩"
+    ],
+    objects: [
+        "🎉", "🎊", "🎈", "🎂", "🎁", "🏆", "🥇", "⚽", "🏀", "🏈", "🎾", "🎮", "🎧", "🎤", "📷", "📹",
+        "📱", "💻", "⌚", "🚗", "✈️", "🚀", "🏠", "🌍", "☀️", "🌊", "🌸", "🌹", "🍀", "🍕", "🍔", "☕"
+    ],
+    flags: [
+        "🇹🇬", "🇫🇷", "🇧🇯", "🇨🇮", "🇸🇳", "🇲🇱", "🇧🇫", "🇨🇲", "🇬🇦", "🇨🇩", "🇨🇬", "🇲🇦", "🇩🇿", "🇹🇳", "🇪🇬", "🇳🇬",
+        "🇬🇭", "🇰🇪", "🇿🇦", "🇺🇸", "🇨🇦", "🇧🇷", "🇦🇷", "🇬🇧", "🇩🇪", "🇪🇸", "🇮🇹", "🇵🇹", "🇧🇪", "🇨🇭", "🇯🇵", "🇨🇳"
+    ]
+};
+
+let currentEmojiCategory = 'faces';
 let currentUser = "Moi";
 let currentGmail = "";
 let currentMediaType = 'image';
@@ -177,6 +206,13 @@ function applyMainWallpaperData(dataUrl) {
 }
 
 function handleAndroidBackButton(e) {
+    const camModal = document.getElementById('camera-capture-modal');
+    if (camModal && !camModal.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeCameraCaptureModal();
+        return true;
+    }
+
     const viewer = document.getElementById('fullscreen-viewer');
     if (viewer && !viewer.classList.contains('hidden')) {
         if (e && e.preventDefault) e.preventDefault();
@@ -209,6 +245,13 @@ function handleAndroidBackButton(e) {
     if (themeModal && !themeModal.classList.contains('hidden')) {
         if (e && e.preventDefault) e.preventDefault();
         closeThemeModal();
+        return true;
+    }
+
+    const attachMenu = document.getElementById('attach-menu-bar');
+    if (attachMenu && !attachMenu.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        attachMenu.classList.add('hidden');
         return true;
     }
 
@@ -278,6 +321,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     } catch (err) {}
 
+    renderEmojiGrid();
     updateChatActionButton();
 
     if ('serviceWorker' in navigator) {
@@ -305,8 +349,44 @@ async function triggerAppInstall() {
 
 function toggleEmojiPicker() {
     const picker = document.getElementById('emoji-picker-bar');
+    const attachMenu = document.getElementById('attach-menu-bar');
+    if (attachMenu) attachMenu.classList.add('hidden');
     if (!picker) return;
     picker.classList.toggle('hidden');
+    if (!picker.classList.contains('hidden')) {
+        renderEmojiGrid();
+    }
+}
+
+function selectEmojiCategory(catKey) {
+    currentEmojiCategory = catKey;
+    ['faces', 'hearts', 'gestures', 'objects', 'flags'].forEach(k => {
+        const btn = document.getElementById('emoji-cat-' + k);
+        if (btn) {
+            if (k === catKey) btn.classList.add('bg-white/10');
+            else btn.classList.remove('bg-white/10');
+        }
+    });
+    renderEmojiGrid();
+}
+
+function renderEmojiGrid() {
+    const grid = document.getElementById('emoji-list-grid');
+    const searchInp = document.getElementById('emoji-search-input');
+    if (!grid) return;
+
+    const query = searchInp ? searchInp.value.trim().toLowerCase() : '';
+    let list = EMOJI_CATEGORIES[currentEmojiCategory] || EMOJI_CATEGORIES.faces;
+
+    if (query) {
+        const allEmojis = Object.values(EMOJI_CATEGORIES).flat();
+        list = allEmojis.filter(em => em.includes(query));
+        if (list.length === 0) list = allEmojis;
+    }
+
+    grid.innerHTML = list.map(em =>
+        `<button type="button" onclick="insertEmoji('${em}')" class="hover:bg-white/10 rounded-lg py-1 transition">${em}</button>`
+    ).join('');
 }
 
 function insertEmoji(emoji) {
@@ -315,6 +395,230 @@ function insertEmoji(emoji) {
     input.value = (input.value || '') + emoji;
     input.focus();
     updateChatActionButton();
+}
+
+function toggleAttachMenu() {
+    const menu = document.getElementById('attach-menu-bar');
+    const picker = document.getElementById('emoji-picker-bar');
+    if (picker) picker.classList.add('hidden');
+    if (!menu) return;
+    menu.classList.toggle('hidden');
+}
+
+function triggerGalleryPicker() {
+    const menu = document.getElementById('attach-menu-bar');
+    if (menu) menu.classList.add('hidden');
+    closeCameraCaptureModal();
+    const inp = document.getElementById('gallery-media-input');
+    if (inp) inp.click();
+}
+
+function triggerDocumentPicker() {
+    const menu = document.getElementById('attach-menu-bar');
+    if (menu) menu.classList.add('hidden');
+    const inp = document.getElementById('doc-file-input');
+    if (inp) inp.click();
+}
+
+let camCaptureMode = 'photo';
+let camFacingMode = 'environment';
+let camCaptureStream = null;
+let camMediaRecorder = null;
+let camVideoChunks = [];
+let isRecordingCamVideo = false;
+let camRecSeconds = 0;
+let camRecTimerInterval = null;
+
+async function openCameraCaptureModal() {
+    const menu = document.getElementById('attach-menu-bar');
+    const picker = document.getElementById('emoji-picker-bar');
+    if (menu) menu.classList.add('hidden');
+    if (picker) picker.classList.add('hidden');
+
+    const modal = document.getElementById('camera-capture-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    setCameraCaptureMode(camCaptureMode);
+    await startCameraStream();
+}
+
+async function startCameraStream() {
+    stopCameraStream();
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Caméra indisponible sur cet appareil.");
+            return;
+        }
+        camCaptureStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: camFacingMode },
+            audio: camCaptureMode === 'video'
+        });
+        const vid = document.getElementById('capture-video-preview');
+        if (vid) {
+            vid.srcObject = camCaptureStream;
+            vid.play().catch(() => {});
+        }
+    } catch (err) {
+        alert("Autorisez l'accès à la caméra pour prendre une photo ou filmer.");
+    }
+}
+
+function stopCameraStream() {
+    if (camRecTimerInterval) {
+        clearInterval(camRecTimerInterval);
+        camRecTimerInterval = null;
+    }
+    isRecordingCamVideo = false;
+    const timerEl = document.getElementById('cam-rec-timer');
+    if (timerEl) timerEl.classList.add('hidden');
+
+    if (camCaptureStream) {
+        camCaptureStream.getTracks().forEach(t => t.stop());
+        camCaptureStream = null;
+    }
+}
+
+function closeCameraCaptureModal() {
+    if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
+        try { camMediaRecorder.stop(); } catch (e) {}
+    }
+    stopCameraStream();
+    const modal = document.getElementById('camera-capture-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function setCameraCaptureMode(mode) {
+    if (isRecordingCamVideo) return;
+    camCaptureMode = mode === 'video' ? 'video' : 'photo';
+    const badge = document.getElementById('camera-mode-badge');
+    const photoBtn = document.getElementById('mode-photo-btn');
+    const videoBtn = document.getElementById('mode-video-btn');
+    const shutterBtn = document.getElementById('shutter-action-btn');
+
+    if (badge) badge.innerText = camCaptureMode === 'video' ? 'MODE VIDÉO' : 'MODE PHOTO';
+    if (photoBtn && videoBtn) {
+        if (camCaptureMode === 'photo') {
+            photoBtn.className = "px-4 py-1.5 rounded-full bg-accent text-black";
+            videoBtn.className = "px-4 py-1.5 rounded-full bg-gray-800 text-white";
+        } else {
+            videoBtn.className = "px-4 py-1.5 rounded-full bg-red-600 text-white";
+            photoBtn.className = "px-4 py-1.5 rounded-full bg-gray-800 text-white";
+        }
+    }
+    if (shutterBtn) {
+        shutterBtn.className = camCaptureMode === 'video'
+            ? "w-16 h-16 rounded-full border-4 border-white bg-red-600 flex items-center justify-center shadow-xl active:scale-95 transition"
+            : "w-16 h-16 rounded-full border-4 border-white bg-white flex items-center justify-center shadow-xl active:scale-95 transition";
+    }
+
+    if (camCaptureStream) {
+        await startCameraStream();
+    }
+}
+
+async function switchCameraFacing() {
+    if (isRecordingCamVideo) return;
+    camFacingMode = camFacingMode === 'environment' ? 'user' : 'environment';
+    await startCameraStream();
+}
+
+function handleCameraShutter() {
+    if (camCaptureMode === 'photo') {
+        takePhotoFromStream();
+    } else {
+        toggleVideoCaptureFromStream();
+    }
+}
+
+function takePhotoFromStream() {
+    const vid = document.getElementById('capture-video-preview');
+    const snapCanvas = document.getElementById('capture-photo-canvas');
+    if (!vid || !snapCanvas || !vid.videoWidth) return;
+
+    snapCanvas.width = vid.videoWidth;
+    snapCanvas.height = vid.videoHeight;
+    const sctx = snapCanvas.getContext('2d');
+    sctx.drawImage(vid, 0, 0, snapCanvas.width, snapCanvas.height);
+    const dataUrl = snapCanvas.toDataURL('image/jpeg', 0.88);
+
+    closeCameraCaptureModal();
+    openEditorWithImageData(dataUrl);
+}
+
+function toggleVideoCaptureFromStream() {
+    const shutterBtn = document.getElementById('shutter-action-btn');
+    const timerEl = document.getElementById('cam-rec-timer');
+
+    if (!isRecordingCamVideo) {
+        if (!camCaptureStream) return;
+        try {
+            camMediaRecorder = new MediaRecorder(camCaptureStream);
+        } catch (e) {
+            alert("Enregistrement vidéo non supporté, utilisez la galerie.");
+            return;
+        }
+        camVideoChunks = [];
+        camMediaRecorder.ondataavailable = e => {
+            if (e.data && e.data.size > 0) camVideoChunks.push(e.data);
+        };
+        camMediaRecorder.onstop = () => {
+            const blob = new Blob(camVideoChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            closeCameraCaptureModal();
+            openEditorWithVideoUrl(url);
+        };
+
+        camMediaRecorder.start(250);
+        isRecordingCamVideo = true;
+        camRecSeconds = 0;
+        if (timerEl) {
+            timerEl.innerText = "00:00";
+            timerEl.classList.remove('hidden');
+        }
+        if (shutterBtn) {
+            shutterBtn.className = "w-16 h-16 rounded-2xl border-4 border-white bg-red-600 flex items-center justify-center shadow-xl transition";
+        }
+        camRecTimerInterval = setInterval(() => {
+            camRecSeconds++;
+            if (timerEl) {
+                const m = String(Math.floor(camRecSeconds / 60)).padStart(2, '0');
+                const s = String(camRecSeconds % 60).padStart(2, '0');
+                timerEl.innerText = `${m}:${s}`;
+            }
+        }, 1000);
+    } else {
+        if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
+            camMediaRecorder.stop();
+        }
+    }
+}
+
+function openEditorWithImageData(dataUrl) {
+    if (!ctx) return;
+    currentMediaType = 'image';
+    document.getElementById('media-caption').value = '';
+    document.getElementById('media-editor-modal').classList.remove('hidden');
+    document.getElementById('preview-video').classList.add('hidden');
+    canvas.classList.remove('hidden');
+    document.getElementById('brush-tools').classList.remove('hidden');
+    baseImage.onload = () => {
+        canvas.width = baseImage.width;
+        canvas.height = baseImage.height;
+        ctx.drawImage(baseImage, 0, 0);
+    };
+    baseImage.src = dataUrl;
+}
+
+function openEditorWithVideoUrl(videoUrl) {
+    currentMediaType = 'video';
+    currentVideoUrl = videoUrl;
+    document.getElementById('media-caption').value = '';
+    document.getElementById('media-editor-modal').classList.remove('hidden');
+    if (canvas) canvas.classList.add('hidden');
+    document.getElementById('brush-tools').classList.add('hidden');
+    const vid = document.getElementById('preview-video');
+    vid.src = currentVideoUrl;
+    vid.classList.remove('hidden');
 }
 
 function updateChatActionButton() {
@@ -389,6 +693,7 @@ async function startVoiceStudio() {
         }, 1000);
 
         document.getElementById('emoji-picker-bar').classList.add('hidden');
+        document.getElementById('attach-menu-bar').classList.add('hidden');
         document.getElementById('normal-input-bar').classList.add('hidden');
         document.getElementById('voice-studio-bar').classList.remove('hidden');
         setUIStateRecording();
@@ -560,6 +865,7 @@ function closeChat() {
         document.getElementById('rec-badge-global').classList.remove('hidden');
     }
     document.getElementById('emoji-picker-bar').classList.add('hidden');
+    document.getElementById('attach-menu-bar').classList.add('hidden');
     document.getElementById('chat-room').classList.add('hidden');
 }
 
@@ -599,6 +905,17 @@ function sendChatMessage() {
 function addMyStatus(event) {
     const file = event.target.files[0];
     if (!file) return;
+    if (file.type && file.type.startsWith('video/')) {
+        const vidUrl = URL.createObjectURL(file);
+        const grid = document.getElementById('status-grid');
+        const card = document.createElement('div');
+        card.className = "h-44 rounded-2xl bg-gray-900 border-2 border-accent p-3 flex flex-col justify-between cursor-pointer overflow-hidden relative";
+        card.onclick = () => openViewer('video', vidUrl, `${currentUser} (Statut Vidéo) • À l'instant`);
+        card.innerHTML = `<video src="${vidUrl}" muted class="absolute inset-0 w-full h-full object-cover opacity-70"></video><div class="relative z-10 w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold">${currentUser.charAt(0).toUpperCase()}</div><div class="relative z-10"><p class="text-xs font-bold text-white">Statut Vidéo ▶️</p><span class="text-[10px] text-accent">À l'instant</span></div>`;
+        grid.prepend(card);
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = function (e) {
         const grid = document.getElementById('status-grid');
@@ -669,45 +986,34 @@ function prepareMediaSend(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.type && !file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mp4|mov|webm|mkv|3gp)$/i.test(file.name || '');
+    const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name || '');
+
+    if (!isVideo && !isImage) {
         const area = document.getElementById('messages-area');
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const div = document.createElement('div');
         div.className = 'flex justify-end';
-        div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>📎 Fichier : ${file.name}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
+        div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>📄 Fichier : ${file.name}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
         area.appendChild(div);
         area.scrollTop = area.scrollHeight;
         event.target.value = '';
         return;
     }
 
-    if (!ctx) return;
-    document.getElementById('media-caption').value = '';
-    document.getElementById('media-editor-modal').classList.remove('hidden');
-    if (file.type.startsWith('video/')) {
-        currentMediaType = 'video';
-        currentVideoUrl = URL.createObjectURL(file);
-        canvas.classList.add('hidden');
-        document.getElementById('brush-tools').classList.add('hidden');
-        const vid = document.getElementById('preview-video');
-        vid.src = currentVideoUrl;
-        vid.classList.remove('hidden');
-    } else {
-        currentMediaType = 'image';
-        document.getElementById('preview-video').classList.add('hidden');
-        canvas.classList.remove('hidden');
-        document.getElementById('brush-tools').classList.remove('hidden');
-        const reader = new FileReader();
-        reader.onload = e => {
-            baseImage.onload = () => {
-                canvas.width = baseImage.width;
-                canvas.height = baseImage.height;
-                ctx.drawImage(baseImage, 0, 0);
-            };
-            baseImage.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+    if (isVideo) {
+        const vidUrl = URL.createObjectURL(file);
+        openEditorWithVideoUrl(vidUrl);
+        event.target.value = '';
+        return;
     }
+
+    if (!ctx) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        openEditorWithImageData(e.target.result);
+    };
+    reader.readAsDataURL(file);
     event.target.value = '';
 }
 
