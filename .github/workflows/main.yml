@@ -62,6 +62,9 @@ jobs:
           npx cap sync android
           node -e '
             const fs = require("fs");
+            const path = require("path");
+
+            // 1. Permissions CAMERA et MICRO
             const manifestPath = "android/app/src/main/AndroidManifest.xml";
             if (fs.existsSync(manifestPath)) {
               let xml = fs.readFileSync(manifestPath, "utf8");
@@ -76,6 +79,49 @@ jobs:
                   perms + "\n\n    <application$1"
                 );
                 fs.writeFileSync(manifestPath, xml, "utf8");
+              }
+            }
+
+            // 2. Interception native du bouton Retour Android dans MainActivity
+            function findMainActivity(dir) {
+              if (!fs.existsSync(dir)) return null;
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  const found = findMainActivity(full);
+                  if (found) return found;
+                } else if (entry.name === "MainActivity.java" || entry.name === "MainActivity.kt") {
+                  return full;
+                }
+              }
+              return null;
+            }
+
+            const mainActPath = findMainActivity("android/app/src/main/java");
+            if (mainActPath && mainActPath.endsWith(".java")) {
+              let javaCode = fs.readFileSync(mainActPath, "utf8");
+              if (!javaCode.includes("handleAndroidBackButton")) {
+                javaCode = javaCode.replace(
+                  /(public class MainActivity extends BridgeActivity\s*\{)/,
+                  `$1
+    @Override
+    public void onBackPressed() {
+        if (this.bridge != null && this.bridge.getWebView() != null) {
+            this.bridge.getWebView().evaluateJavascript(
+                "(function(){ return (typeof window.handleAndroidBackButton === '\''function'\'' && window.handleAndroidBackButton()) ? '\''HANDLED'\'' : '\''EXIT'\''; })();",
+                value -> {
+                    if (value == null || !value.contains("HANDLED")) {
+                        MainActivity.super.onBackPressed();
+                    }
+                }
+            );
+        } else {
+            super.onBackPressed();
+        }
+    }
+`
+                );
+                fs.writeFileSync(mainActPath, javaCode, "utf8");
               }
             }
           '
