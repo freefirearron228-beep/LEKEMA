@@ -64,7 +64,6 @@ jobs:
             const fs = require("fs");
             const path = require("path");
 
-            // 1. Permissions CAMERA et MICRO
             const manifestPath = "android/app/src/main/AndroidManifest.xml";
             if (fs.existsSync(manifestPath)) {
               let xml = fs.readFileSync(manifestPath, "utf8");
@@ -82,7 +81,6 @@ jobs:
               }
             }
 
-            // 2. Interception native du bouton Retour Android dans MainActivity
             function findMainActivity(dir) {
               if (!fs.existsSync(dir)) return null;
               for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -101,23 +99,39 @@ jobs:
             if (mainActPath && mainActPath.endsWith(".java")) {
               let javaCode = fs.readFileSync(mainActPath, "utf8");
               if (!javaCode.includes("handleAndroidBackButton")) {
+                if (!javaCode.includes("import android.webkit.ValueCallback;")) {
+                  javaCode = javaCode.replace(
+                    /(package\s+[\w.]+;\s*)/,
+                    "$1\nimport android.webkit.ValueCallback;\n"
+                  );
+                }
                 javaCode = javaCode.replace(
                   /(public class MainActivity extends BridgeActivity\s*\{)/,
                   `$1
     @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (this.bridge != null && this.bridge.getWebView() != null) {
-            this.bridge.getWebView().evaluateJavascript(
-                "(function(){ return (typeof window.handleAndroidBackButton === '\''function'\'' && window.handleAndroidBackButton()) ? '\''HANDLED'\'' : '\''EXIT'\''; })();",
-                value -> {
-                    if (value == null || !value.contains("HANDLED")) {
-                        MainActivity.super.onBackPressed();
-                    }
+        final MainActivity self = this;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (self.bridge != null && self.bridge.getWebView() != null) {
+                    self.bridge.getWebView().evaluateJavascript(
+                        "(function(){ return (typeof window.handleAndroidBackButton === '\''function'\'' && window.handleAndroidBackButton()) ? '\''HANDLED'\'' : '\''EXIT'\''; })();",
+                        new ValueCallback<String>() {
+                            @Override
+                            public void onReceiveValue(String value) {
+                                if (value == null || !value.contains("HANDLED")) {
+                                    self.finish();
+                                }
+                            }
+                        }
+                    );
+                } else {
+                    self.finish();
                 }
-            );
-        } else {
-            super.onBackPressed();
-        }
+            }
+        });
     }
 `
                 );
