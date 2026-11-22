@@ -44,12 +44,8 @@ jobs:
               let xml = fs.readFileSync(manifestPath, "utf8");
               if (!xml.includes("android.permission.RECORD_AUDIO")) {
                 xml = xml.replace(
-                  "<manifest",
-                  "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\""
-                );
-                xml = xml.replace(
-                  "<application",
-                  "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\" />\n\n    <application"
+                  /<application(\s|>)/,
+                  "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\" />\n\n    <application$1"
                 );
                 fs.writeFileSync(manifestPath, xml, "utf8");
               }
