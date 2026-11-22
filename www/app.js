@@ -11,25 +11,33 @@ const EMOJI_CATEGORIES = {
         "😗", "😚", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑",
         "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮",
         "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮",
-        "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓"
+        "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓",
+        "🥹", "🥲", "🫠", "🫡", "🫥", "😶‍🌫️", "😮‍💨", "😤", "😠", "😡", "🤬", "😈", "👿", "💀", "☠️", "💩",
+        "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"
     ],
     hearts: [
         "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "💕", "💞", "💓", "💗",
         "💖", "💘", "💝", "💟", "💯", "💢", "💥", "💫", "💦", "💨", "🕳️", "💣", "💬", "👁️‍🗨️", "🗨️", "🗯️",
-        "💭", "💤", "✨", "🌟", "⭐", "🔥", "☀️", "🌙", "⚡", "🌈", "🎵", "🎶", "🔔", "🔕", "💎", "👑"
+        "💭", "💤", "✨", "🌟", "⭐", "🔥", "☀️", "🌙", "⚡", "🌈", "🎵", "🎶", "🔔", "🔕", "💎", "👑",
+        "💌", "🌹", "🌷", "💐", "🌺", "🌻", "🌼", "🍀", "🕊️", "🦋", "🕯️", "🥂", "🍻", "🎈", "🎀", "🎗️"
     ],
     gestures: [
         "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆",
         "🖕", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✍️",
-        "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "👶", "🧒", "👦", "👧", "🧑", "👱", "👨", "👩"
+        "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "👶", "🧒", "👦", "👧", "🧑", "👱", "👨", "👩",
+        "🫶", "🫰", "🫵", "🫱", "🫲", "🫳", "🫴", "🫷", "🫸", "🙇", "🤦", "🤷", "🙋", "💁", "🙅", "🙆"
     ],
     objects: [
         "🎉", "🎊", "🎈", "🎂", "🎁", "🏆", "🥇", "⚽", "🏀", "🏈", "🎾", "🎮", "🎧", "🎤", "📷", "📹",
-        "📱", "💻", "⌚", "🚗", "✈️", "🚀", "🏠", "🌍", "☀️", "🌊", "🌸", "🌹", "🍀", "🍕", "🍔", "☕"
+        "📱", "💻", "⌚", "🚗", "✈️", "🚀", "🏠", "🌍", "☀️", "🌊", "🌸", "🌹", "🍀", "🍕", "🍔", "☕",
+        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🦁", "🐯", "🐵", "🐔", "🐧", "🐦", "🐤", "🐬",
+        "🍎", "🍌", "🍇", "🍉", "🍓", "🍒", "🍍", "🥭", "🍗", "🍟", "🍩", "🍪", "🍫", "🥤", "🍺", "⚽"
     ],
     flags: [
         "🇹🇬", "🇫🇷", "🇧🇯", "🇨🇮", "🇸🇳", "🇲🇱", "🇧🇫", "🇨🇲", "🇬🇦", "🇨🇩", "🇨🇬", "🇲🇦", "🇩🇿", "🇹🇳", "🇪🇬", "🇳🇬",
-        "🇬🇭", "🇰🇪", "🇿🇦", "🇺🇸", "🇨🇦", "🇧🇷", "🇦🇷", "🇬🇧", "🇩🇪", "🇪🇸", "🇮🇹", "🇵🇹", "🇧🇪", "🇨🇭", "🇯🇵", "🇨🇳"
+        "🇬🇭", "🇰🇪", "🇿🇦", "🇺🇸", "🇨🇦", "🇧🇷", "🇦🇷", "🇬🇧", "🇩🇪", "🇪🇸", "🇮🇹", "🇵🇹", "🇧🇪", "🇨🇭", "🇯🇵", "🇨🇳",
+        "🇮🇳", "🇷🇺", "🇦🇺", "🇲🇽", "🇨🇴", "🇨🇱", "🇵🇪", "🇳🇱", "🇸🇪", "🇳🇴", "🇩🇰", "🇫🇮", "🇵🇱", "🇹🇷", "🇸🇦", "🇦🇪",
+        "🇪🇹", "🇺🇬", "🇷🇼", "🇲🇬", "🇸🇳", "🇬🇳", "🇲🇷", "🇳🇪", "🇹🇩", "🇨🇫", "🇦🇴", "🇲🇿", "🇿🇲", "🇧🇼", "🇳🇦", "🏳️"
     ]
 };
 
@@ -420,6 +428,21 @@ function triggerDocumentPicker() {
     if (inp) inp.click();
 }
 
+async function ensureCameraPermission() {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+            if (window.Capacitor.Plugins && window.Capacitor.Plugins.Permissions) {
+                const status = await window.Capacitor.Plugins.Permissions.query({ name: 'camera' });
+                if (status.state !== 'granted') {
+                    const req = await window.Capacitor.Plugins.Permissions.request({ name: 'camera' });
+                    if (req.state !== 'granted') return false;
+                }
+            }
+        } catch (err) {}
+    }
+    return true;
+}
+
 let camCaptureMode = 'photo';
 let camFacingMode = 'environment';
 let camCaptureStream = null;
@@ -445,14 +468,27 @@ async function openCameraCaptureModal() {
 async function startCameraStream() {
     stopCameraStream();
     try {
+        const permitted = await ensureCameraPermission();
+        if (!permitted) {
+            alert("Autorisez l'accès à la caméra pour prendre une photo ou filmer.");
+            return;
+        }
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             alert("Caméra indisponible sur cet appareil.");
             return;
         }
-        camCaptureStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: camFacingMode },
-            audio: camCaptureMode === 'video'
-        });
+
+        const constraints = camCaptureMode === 'video'
+            ? { video: { facingMode: camFacingMode }, audio: true }
+            : { video: { facingMode: camFacingMode }, audio: false };
+
+        try {
+            camCaptureStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (firstErr) {
+            camCaptureStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+
         const vid = document.getElementById('capture-video-preview');
         if (vid) {
             vid.srcObject = camCaptureStream;
