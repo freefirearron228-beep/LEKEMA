@@ -14,6 +14,10 @@ let isDrawing = false;
 let brushColor = '#000000';
 let pendingAuth = null;
 
+let activeMessageAudio = null;
+let activeMessageBtn = null;
+let activeMessageUrl = '';
+
 function showFieldError(id, message) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -485,7 +489,7 @@ function appendVoiceMessage(audioUrl, duration) {
     div.className = 'flex justify-end';
     div.innerHTML = `
         <div class="bg-accent p-3 rounded-2xl max-w-[75%] shadow flex items-center space-x-3">
-            <button type="button" onclick="playAudio(this, '${audioUrl}')" class="w-10 h-10 bg-black text-accent rounded-full flex items-center justify-center font-bold text-lg">▶️</button>
+            <button type="button" data-audio-url="${audioUrl}" onclick="playAudio(this)" class="w-10 h-10 bg-black text-accent rounded-full flex items-center justify-center font-bold text-lg">▶️</button>
             <div>
                 <div class="text-xs font-bold flex items-center space-x-2">
                     <span>Vocal 🎤</span>
@@ -499,14 +503,56 @@ function appendVoiceMessage(audioUrl, duration) {
     area.scrollTop = area.scrollHeight;
 }
 
-function playAudio(btn, url) {
+function playAudio(btn, fallbackUrl) {
+    const url = (btn && btn.dataset && btn.dataset.audioUrl) ? btn.dataset.audioUrl : fallbackUrl;
+    if (!url) return;
+
+    if (activeMessageAudio && activeMessageBtn === btn && activeMessageUrl === url) {
+        if (!activeMessageAudio.paused) {
+            activeMessageAudio.pause();
+            btn.innerText = '▶️';
+        } else {
+            activeMessageAudio.play().catch(() => {});
+            btn.innerText = '⏸️';
+        }
+        return;
+    }
+
+    if (activeMessageAudio) {
+        activeMessageAudio.pause();
+        activeMessageAudio.currentTime = 0;
+    }
+    if (activeMessageBtn && activeMessageBtn !== btn) {
+        activeMessageBtn.innerText = '▶️';
+    }
+
     const audio = new Audio(url);
-    audio.play();
+    activeMessageAudio = audio;
+    activeMessageBtn = btn;
+    activeMessageUrl = url;
+
     btn.innerText = '⏸️';
-    audio.onended = () => { btn.innerText = '▶️'; };
+    audio.onended = () => {
+        btn.innerText = '▶️';
+        if (activeMessageAudio === audio) {
+            activeMessageAudio = null;
+            activeMessageBtn = null;
+            activeMessageUrl = '';
+        }
+    };
+    audio.onerror = () => {
+        btn.innerText = '▶️';
+    };
+    audio.play().catch(() => {
+        btn.innerText = '▶️';
+    });
 }
 
 function closeChat() {
+    if (activeMessageAudio && !activeMessageAudio.paused) {
+        activeMessageAudio.pause();
+        if (activeMessageBtn) activeMessageBtn.innerText = '▶️';
+    }
     if (voiceState === 'recording' && mediaRecorder && typeof mediaRecorder.pause === 'function') {
         mediaRecorder.pause();
         voiceState = 'paused';
