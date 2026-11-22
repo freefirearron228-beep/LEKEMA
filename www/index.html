@@ -67,7 +67,7 @@
         <!-- EN-TÊTE -->
         <header class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
-                <div id="header-avatar" class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-black text-sm">M</div>
+                <button type="button" onclick="openProfileModal()" id="header-avatar" class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-black text-sm">M</button>
                 <div>
                     <h2 class="font-bold text-sm leading-tight">LEKEMA</h2>
                     <span id="rec-badge-global" class="hidden text-[10px] text-red-400 font-semibold">Vocal en pause</span>
@@ -76,7 +76,10 @@
 
             <div class="flex items-center space-x-2">
                 <button type="button" onclick="openThemeModal()" class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
-                <button type="button" onclick="logoutUser()" class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold text-red-400">Déconnexion</button>
+                <label class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold cursor-pointer">
+                    Fond
+                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
+                </label>
             </div>
         </header>
 
@@ -86,14 +89,10 @@
             <button type="button" onclick="triggerAppInstall()" class="bg-black text-white px-3 py-1 rounded-lg">Installer</button>
         </div>
 
-        <!-- ONGLET CHATS -->
+        <!-- ONGLET DISCUSSIONS -->
         <main id="tab-chats" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-sm font-bold text-gray-300">Discussions</h3>
-                <label class="text-xs text-accent font-semibold cursor-pointer">
-                    Fond d'écran
-                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
-                </label>
             </div>
 
             <div onclick="openChat('Sarah K.', 'En ligne')" class="bg-card border border-gray-800 rounded-2xl p-3.5 flex items-center space-x-3 cursor-pointer">
@@ -156,15 +155,15 @@
         <!-- BARRE DE NAVIGATION BAS -->
         <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5 text-xs font-semibold">
             <button type="button" onclick="switchTab('chats')" id="nav-chats" class="text-accent flex flex-col items-center">
-                <span class="text-lg">💬</span>
-                <span class="text-[11px]">Chats</span>
+                <span class="text-lg">💭</span>
+                <span class="text-[11px]">Discussions</span>
             </button>
             <button type="button" onclick="switchTab('status')" id="nav-status" class="text-gray-500 flex flex-col items-center">
-                <span class="text-lg">⭕</span>
+                <span class="text-lg">🟢</span>
                 <span class="text-[11px]">Statuts</span>
             </button>
             <button type="button" onclick="switchTab('live')" id="nav-live" class="text-gray-500 flex flex-col items-center">
-                <span class="text-lg">📡</span>
+                <span class="text-lg">🎥</span>
                 <span class="text-[11px]">Live</span>
             </button>
         </nav>
@@ -189,14 +188,43 @@
 
         <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center"></div>
 
-        <div id="normal-input-bar" class="bg-card border-t border-gray-800 p-3 flex items-center space-x-2">
-            <label class="p-2.5 rounded-xl bg-black/40 border border-gray-700 cursor-pointer text-sm">
-                📎
-                <input type="file" accept="image/*,video/*" onchange="prepareMediaSend(event)" class="hidden">
-            </label>
-            <input type="text" id="chat-input" placeholder="Écrire un message..." class="flex-1 bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none">
-            <button type="button" onclick="startVoiceStudio()" class="p-2.5 rounded-xl bg-black/40 border border-gray-700 text-sm">🎤</button>
-            <button type="button" onclick="sendChatMessage()" class="bg-accent px-4 py-2.5 rounded-xl text-xs font-bold">Envoyer</button>
+        <!-- PICKER ÉMOJIS RAPIDES -->
+        <div id="emoji-picker-bar" class="hidden bg-card border-t border-gray-800 px-3 py-2 flex items-center justify-around text-xl">
+            <button type="button" onclick="insertEmoji('😀')">😀</button>
+            <button type="button" onclick="insertEmoji('😂')">😂</button>
+            <button type="button" onclick="insertEmoji('❤️')">❤️</button>
+            <button type="button" onclick="insertEmoji('🔥')">🔥</button>
+            <button type="button" onclick="insertEmoji('👍')">👍</button>
+            <button type="button" onclick="insertEmoji('🙏')">🙏</button>
+            <button type="button" onclick="insertEmoji('🎉')">🎉</button>
+        </div>
+
+        <!-- BARRE D'ÉCRITURE STYLE MESSAGERIE -->
+        <div id="normal-input-bar" class="px-3 py-2.5 flex items-center space-x-2">
+            <div class="flex-1 bg-[#1e2229] border border-gray-700/80 rounded-full px-3.5 py-2 flex items-center space-x-2 shadow">
+                <button type="button" onclick="toggleEmojiPicker()" class="text-lg text-gray-300 hover:text-white shrink-0">☺️</button>
+                <input type="text" id="chat-input" oninput="updateChatActionButton()" placeholder="Message" class="flex-1 bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none min-w-0">
+                <label class="text-gray-300 hover:text-white cursor-pointer text-base shrink-0">
+                    📎
+                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.zip" onchange="prepareMediaSend(event)" class="hidden">
+                </label>
+                <label class="text-gray-300 hover:text-white cursor-pointer text-base shrink-0">
+                    📷
+                    <input type="file" accept="image/*" capture="environment" onchange="prepareMediaSend(event)" class="hidden">
+                </label>
+            </div>
+
+            <!-- BOUTON MICRO CIRCULAIRE -->
+            <button type="button" id="mic-circle-btn" onclick="startVoiceStudio()" class="w-12 h-12 rounded-full bg-[#e06d53] text-black flex items-center justify-center shadow-lg shrink-0 active:scale-95 transition" aria-label="Enregistrer un vocal">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+                </svg>
+            </button>
+
+            <!-- BOUTON ENVOYER (VISIBLE QUAND DU TEXTE EST SAISI) -->
+            <button type="button" id="send-text-btn" onclick="sendChatMessage()" class="hidden h-12 px-4 rounded-full bg-accent text-xs font-bold shadow-lg shrink-0 active:scale-95 transition">
+                Envoyer
+            </button>
         </div>
 
         <div id="voice-studio-bar" class="hidden bg-card border-t border-gray-800 p-3 flex items-center justify-between space-x-2">
@@ -211,6 +239,23 @@
                 <button type="button" onclick="cancelVoiceStudio()" class="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs">Annuler</button>
                 <button type="button" onclick="sendFinalVoice()" class="px-3 py-1.5 rounded-lg bg-accent text-xs font-bold">Envoyer</button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL PROFIL & DÉCONNEXION -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-card border border-gray-800 rounded-2xl p-5 w-full max-w-sm space-y-4">
+            <div class="flex items-center space-x-3">
+                <div id="profile-modal-avatar" class="w-11 h-11 rounded-full bg-accent flex items-center justify-center font-black text-base">M</div>
+                <div>
+                    <h3 id="profile-modal-name" class="font-bold text-sm">Malik</h3>
+                    <p id="profile-modal-gmail" class="text-xs text-gray-400">Compte connecté</p>
+                </div>
+            </div>
+            <button type="button" onclick="logoutUser()" class="w-full py-2.5 rounded-xl bg-red-600/20 border border-red-500/40 text-red-400 font-bold text-xs">
+                Déconnexion
+            </button>
+            <button type="button" onclick="closeProfileModal()" class="w-full py-2 text-xs text-gray-400">Fermer</button>
         </div>
     </div>
 
