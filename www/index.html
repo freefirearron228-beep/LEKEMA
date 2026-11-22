@@ -2,155 +2,282 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#FACC15">
     <title>LEKEMA - App</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style.css">
 </head>
 <body class="h-screen flex flex-col overflow-hidden select-none">
 
-    <div id="auth-screen" class="fixed inset-0 bg-[#0d0d0d] z-50 flex flex-col justify-center px-6">
-        <div class="max-w-md w-full mx-auto bg-[#161616] border border-gray-800 p-8 rounded-3xl shadow-2xl">
+    <!-- ÉCRAN D'AUTHENTIFICATION -->
+    <div id="auth-screen" class="fixed inset-0 bg-[#0d0d0d] z-50 flex items-center justify-center p-4">
+        <div class="max-w-md w-full mx-auto bg-[#161616] border border-gray-800 rounded-3xl p-6 shadow-2xl">
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-accent font-lekema">LEKEMA</h1>
-                <p class="text-xs text-gray-400 mt-2">Connexion sécurisée par Gmail & Pseudo</p>
+                <h1 class="text-4xl font-black text-accent tracking-tight">LEKEMA</h1>
+                <p class="text-xs text-gray-400 mt-2">Connexion sécurisée par Gmail &amp; Pseudo</p>
             </div>
 
             <div id="step-credentials" class="space-y-4">
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Votre Pseudo Unique</label>
-                    <input type="text" id="username-input" placeholder="Ex: Malik" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-accent focus:outline-none">
-                    <p id="username-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                    <input type="text" id="username-input" placeholder="Ex: Malik" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400">
+                    <p id="username-error" class="hidden text-xs text-red-400 mt-1"></p>
                 </div>
+
                 <div>
                     <label class="block text-xs text-gray-400 mb-1">Adresse Gmail</label>
-                    <input type="email" id="gmail-input" placeholder="exemple@gmail.com" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-accent focus:outline-none">
-                    <p id="gmail-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                    <input type="email" id="gmail-input" placeholder="Ex: nom@gmail.com" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400">
+                    <p id="gmail-error" class="hidden text-xs text-red-400 mt-1"></p>
                 </div>
-                <button onclick="requestGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition mt-2">
+
+                <button id="send-code-btn" type="button" onclick="requestGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition mt-2">
                     Envoyer le code sur Gmail
                 </button>
             </div>
 
             <div id="step-otp" class="hidden space-y-4">
-                <div class="bg-black/60 border border-gray-800 rounded-xl p-3 text-xs text-gray-300">
-                    Un code à 6 chiffres a été envoyé pour <span id="otp-target-gmail" class="text-accent font-semibold"></span>. Consultez votre boîte Gmail et saisissez-le ci-dessous.
-                </div>
+                <p class="text-xs text-gray-300 text-center">
+                    Code envoyé à <span id="otp-target-gmail" class="text-accent font-semibold"></span>
+                </p>
+
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1">Code de confirmation (6 chiffres)</label>
-                    <input type="text" id="otp-input" maxlength="6" inputmode="numeric" placeholder="000000" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-center tracking-[0.4em] text-lg font-bold text-white focus:border-accent focus:outline-none">
-                    <p id="otp-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                    <label class="block text-xs text-gray-400 mb-1">Code à 6 chiffres</label>
+                    <input type="text" id="otp-input" maxlength="6" placeholder="123456" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-center tracking-widest text-lg text-white focus:outline-none focus:border-yellow-400">
+                    <p id="otp-error" class="hidden text-xs text-red-400 mt-1"></p>
                 </div>
-                <button onclick="verifyGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition">
-                    Vérifier et entrer
+
+                <button type="button" onclick="verifyGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition">
+                    Valider le code
                 </button>
-                <button onclick="backToCredentials()" class="w-full text-xs text-gray-400 hover:text-white py-2">
-                    ← Modifier le pseudo ou l'adresse Gmail
+
+                <button type="button" onclick="backToCredentials()" class="w-full text-xs text-gray-400 py-2">
+                    Modifier le pseudo ou l'adresse Gmail
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="main-app" class="hidden flex-1 flex flex-col h-full">
-        <header class="bg-black/95 border-b border-gray-900 px-3 py-3 flex justify-between items-center z-10">
-            <h1 class="text-xl font-black text-accent font-lekema">LEKEMA</h1>
+    <!-- APPLICATION PRINCIPALE -->
+    <div id="main-app" class="hidden h-full flex flex-col">
+
+        <!-- EN-TÊTE -->
+        <header class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div id="header-avatar" class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-black text-sm">M</div>
+                <div>
+                    <h2 class="font-bold text-sm leading-tight">LEKEMA</h2>
+                    <span id="rec-badge-global" class="hidden text-[10px] text-red-400 font-semibold">Vocal en pause</span>
+                </div>
+            </div>
+
             <div class="flex items-center space-x-2">
-                <label class="text-[11px] bg-gray-900 border border-gray-800 px-2.5 py-1.5 rounded-full flex items-center space-x-1 text-white cursor-pointer">
-                    <span>🖼️</span><span>Fond</span>
-                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
-                </label>
-                <button onclick="openThemeModal()" class="text-[11px] bg-gray-900 border border-gray-800 px-2.5 py-1.5 rounded-full flex items-center space-x-1 text-white">
-                    <span>🎨</span><span>Thèmes</span>
-                </button>
-                <button onclick="logoutUser()" title="Déconnexion" class="text-[11px] bg-gray-900 border border-gray-800 px-2 py-1.5 rounded-full text-gray-300 hover:text-red-400">
-                    ⏻
-                </button>
-                <div id="header-avatar" class="w-7 h-7 rounded-full bg-accent font-bold flex items-center justify-center text-xs">M</div>
+                <button type="button" onclick="openThemeModal()" class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
+                <button type="button" onclick="logoutUser()" class="px-3 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold text-red-400">Déconnexion</button>
             </div>
         </header>
 
-        <div id="install-app-banner" class="hidden bg-accent px-4 py-2 flex justify-between items-center text-xs font-bold">
-            <span>📲 Installer LEKEMA sur votre téléphone</span>
-            <button onclick="triggerAppInstall()" class="bg-black text-white px-3 py-1 rounded-full">Installer</button>
+        <!-- BANNIÈRE D'INSTALLATION -->
+        <div id="install-app-banner" class="hidden bg-accent px-4 py-2 flex items-center justify-between text-xs font-bold">
+            <span>Installer LEKEMA sur l'écran d'accueil</span>
+            <button type="button" onclick="triggerAppInstall()" class="bg-black text-white px-3 py-1 rounded-lg">Installer</button>
         </div>
 
-        <main id="tab-chats" class="flex-1 overflow-y-auto p-3 space-y-2 bg-cover bg-center">
-            <div class="px-2 pb-2 flex justify-between items-center">
-                <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Discussions récentes</span>
-                <span id="rec-badge-global" class="hidden text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold">🎤 Vocal en pause</span>
+        <!-- ONGLET CHATS -->
+        <main id="tab-chats" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-bold text-gray-300">Discussions</h3>
+                <label class="text-xs text-accent font-semibold cursor-pointer">
+                    Fond d'écran
+                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
+                </label>
             </div>
-            <div onclick="openChat('Sarah K.', 'En ligne')" class="flex items-center justify-between p-3 bg-card/90 backdrop-blur-md hover:opacity-95 rounded-2xl cursor-pointer transition border border-gray-800/70">
-                <div class="flex items-center space-x-3">
-                    <div class="relative">
-                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">S</div>
-                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-black rounded-full"></span>
+
+            <div onclick="openChat('Sarah K.', 'En ligne')" class="bg-card border border-gray-800 rounded-2xl p-3.5 flex items-center space-x-3 cursor-pointer">
+                <div class="w-11 h-11 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">S</div>
+                <div class="flex-1">
+                    <div class="flex justify-between items-center">
+                        <p class="font-bold text-sm">Sarah K.</p>
+                        <span class="text-[10px] text-gray-400">Maintenant</span>
                     </div>
-                    <div>
-                        <h3 class="font-bold text-sm">Sarah K.</h3>
-                        <p class="text-xs text-gray-300 truncate w-44">Tu lances ton live ce soir ?</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-accent font-semibold block">12:50</span>
-                    <span class="inline-block bg-accent text-[10px] font-bold px-2 py-0.5 rounded-full mt-1">2</span>
+                    <p class="text-xs text-gray-400">Appuie pour discuter...</p>
                 </div>
             </div>
         </main>
 
-        <main id="tab-status" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
-            <h2 class="text-sm font-bold text-gray-300">Statuts (24h)</h2>
-            <label class="flex items-center space-x-3 p-3 bg-card rounded-2xl border border-dashed border-accent cursor-pointer">
-                <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-xl font-bold">+</div>
-                <div>
-                    <h3 class="font-bold text-sm">Publier un Statut Photo</h3>
-                    <p class="text-xs text-gray-400">Choisir une image de votre galerie</p>
-                </div>
-                <input type="file" accept="image/*" onchange="addMyStatus(event)" class="hidden">
-            </label>
-            <div id="status-grid" class="grid grid-cols-2 gap-3 pt-2">
-                <div onclick="openViewer('image', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600', 'Sarah K. • Il y a 15 min')" class="h-44 rounded-2xl bg-cover bg-center border border-accent p-3 flex flex-col justify-between cursor-pointer" style="background-image: linear-gradient(transparent, rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400');">
-                    <div class="w-8 h-8 rounded-full bg-purple-600 border-2 border-accent flex items-center justify-center text-xs font-bold text-white">S</div>
+        <!-- ONGLET STATUTS -->
+        <main id="tab-status" class="hidden flex-1 overflow-y-auto p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold text-gray-300">Statuts</h3>
+                <label class="bg-accent px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer">
+                    Ajouter un statut
+                    <input type="file" accept="image/*" onchange="addMyStatus(event)" class="hidden">
+                </label>
+            </div>
+
+            <div id="status-grid" class="grid grid-cols-2 gap-3 pt-1">
+                <div onclick="openViewer('image', 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800', 'Sarah K. • À l\'instant')" class="h-44 rounded-2xl bg-cover bg-center border border-gray-700 p-3 flex flex-col justify-between cursor-pointer" style="background-image: linear-gradient(transparent, rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1518770660439-4636190af475?w=800')">
+                    <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold text-white">S</div>
                     <div>
                         <p class="text-xs font-bold text-white">Sarah K.</p>
-                        <span class="text-[10px] text-gray-300">Il y a 15 min</span>
+                        <span class="text-[10px] text-gray-300">Il y a quelques minutes</span>
                     </div>
                 </div>
             </div>
         </main>
 
-        <main id="tab-live" class="hidden flex-1 overflow-y-auto p-4 flex flex-col justify-between">
-            <div>
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-sm font-bold">Amis en Direct 🔴</h2>
-                    <span class="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold">1 Live actif</span>
+        <!-- ONGLET LIVE -->
+        <main id="tab-live" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-sm font-bold">Amis en Direct</h2>
+                <span class="text-[10px] bg-red-600/20 text-red-400 px-2 py-0.5 rounded-full font-semibold">LIVE</span>
+            </div>
+
+            <div class="bg-card border border-gray-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold">EN DIRECT</span>
+                    <span class="bg-black/60 text-white text-xs px-2 py-0.5 rounded">128 spectateurs</span>
                 </div>
-                <div class="bg-card border border-gray-800 rounded-3xl p-4">
-                    <div class="flex justify-between items-center mb-10">
-                        <span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full animate-pulse">EN DIRECT</span>
-                        <span class="bg-black/60 text-white text-xs px-2.5 py-1 rounded-full">👁️ 14 amis</span>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-base">Sarah K. est en live</h3>
-                        <p class="text-xs text-gray-400 mb-3">Session chill & musique ce soir 🎶</p>
-                        <button onclick="startLiveStream(false)" class="w-full bg-white text-black font-bold py-2.5 rounded-xl text-xs">Rejoindre le Live</button>
-                    </div>
+                <div>
+                    <h3 class="font-bold text-base">Sarah K. est en live</h3>
+                    <p class="text-xs text-gray-400 mb-3">Session discussion &amp; musique</p>
+                    <button type="button" onclick="startLiveStream(false)" class="w-full bg-accent py-2.5 rounded-xl text-xs font-bold">Rejoindre le Live</button>
                 </div>
             </div>
-            <button onclick="startLiveStream(true)" class="w-full bg-accent font-extrabold py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-2 mt-4">
-                <span>📹</span><span>Lancer mon Live maintenant</span>
+
+            <button type="button" onclick="startLiveStream(true)" class="w-full bg-red-600 text-white py-3 rounded-2xl font-bold text-sm">
+                <span>Lancer mon Live maintenant</span>
             </button>
         </main>
 
-        <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5">
-            <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-accent">
-                <span class="text-lg">💬</span><span class="text-[10px] font-bold mt-0.5">Discussions</span>
+        <!-- BARRE DE NAVIGATION BAS -->
+        <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5 text-xs font-semibold">
+            <button type="button" onclick="switchTab('chats')" id="nav-chats" class="text-accent flex flex-col items-center">
+                <span class="text-lg">💬</span>
+                <span class="text-[11px]">Chats</span>
             </button>
-            <button onclick="switchTab('status')" id="nav-status" class="flex flex-col items-center text-gray-500">
-                <span class="text-lg">⭕</span><span class="text-[10px] font-semibold mt-0.5">Statuts</span>
+            <button type="button" onclick="switchTab('status')" id="nav-status" class="text-gray-500 flex flex-col items-center">
+                <span class="text-lg">⭕</span>
+                <span class="text-[11px]">Statuts</span>
             </button>
-            <button onclick="switchTab('live')" id
-              
+            <button type="button" onclick="switchTab('live')" id="nav-live" class="text-gray-500 flex flex-col items-center">
+                <span class="text-lg">📡</span>
+                <span class="text-[11px]">Live</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- SALLE DE CHAT -->
+    <div id="chat-room" class="hidden fixed inset-0 bg-[#0d0d0d] z-40 flex flex-col">
+        <div class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <button type="button" onclick="closeChat()" class="text-lg font-bold">←</button>
+                <div id="chat-contact-avatar" class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-sm">S</div>
+                <div>
+                    <p id="chat-contact-name" class="font-bold text-sm">Contact</p>
+                    <span id="chat-contact-status" class="text-[11px] text-gray-400">En ligne</span>
+                </div>
+            </div>
+            <label class="text-xs text-accent font-semibold cursor-pointer">
+                Fond
+                <input type="file" accept="image/*" onchange="changeChatWallpaper(event)" class="hidden">
+            </label>
+        </div>
+
+        <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center"></div>
+
+        <div id="normal-input-bar" class="bg-card border-t border-gray-800 p-3 flex items-center space-x-2">
+            <label class="p-2.5 rounded-xl bg-black/40 border border-gray-700 cursor-pointer text-sm">
+                📎
+                <input type="file" accept="image/*,video/*" onchange="prepareMediaSend(event)" class="hidden">
+            </label>
+            <input type="text" id="chat-input" placeholder="Écrire un message..." class="flex-1 bg-black border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none">
+            <button type="button" onclick="startVoiceStudio()" class="p-2.5 rounded-xl bg-black/40 border border-gray-700 text-sm">🎤</button>
+            <button type="button" onclick="sendChatMessage()" class="bg-accent px-4 py-2.5 rounded-xl text-xs font-bold">Envoyer</button>
+        </div>
+
+        <div id="voice-studio-bar" class="hidden bg-card border-t border-gray-800 p-3 flex items-center justify-between space-x-2">
+            <div class="flex items-center space-x-2">
+                <span id="rec-indicator" class="w-3 h-3 rounded-full bg-red-500"></span>
+                <span id="rec-status-text" class="text-xs font-semibold">Enregistrement...</span>
+                <span id="rec-timer" class="text-xs font-mono text-gray-300">00:00</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button type="button" id="pause-resume-btn" onclick="togglePauseResumeVoice()" class="px-2.5 py-1.5 rounded-lg bg-black/50 text-xs">⏸️ Pause</button>
+                <button type="button" id="preview-voice-btn" onclick="previewRecordedVoice()" class="hidden px-2.5 py-1.5 rounded-lg bg-black/50 text-xs">▶️ Écouter</button>
+                <button type="button" onclick="cancelVoiceStudio()" class="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs">Annuler</button>
+                <button type="button" onclick="sendFinalVoice()" class="px-3 py-1.5 rounded-lg bg-accent text-xs font-bold">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÉDITEUR MÉDIA -->
+    <div id="media-editor-modal" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
+        <div class="flex justify-between items-center">
+            <button type="button" onclick="closeMediaEditor()" class="text-white font-bold text-sm">Fermer</button>
+            <div id="brush-tools" class="flex items-center space-x-2">
+                <button type="button" onclick="setBrushColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-white"></button>
+                <button type="button" onclick="setBrushColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500"></button>
+                <button type="button" onclick="setBrushColor('#facc15')" class="w-6 h-6 rounded-full bg-yellow-400"></button>
+                <button type="button" onclick="clearCanvas()" class="text-xs text-gray-300 px-2 py-1 bg-gray-800 rounded">Effacer</button>
+            </div>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center my-3 overflow-hidden">
+            <canvas id="edit-canvas" class="max-w-full max-h-full rounded-xl"></canvas>
+            <video id="preview-video" controls class="hidden max-w-full max-h-full rounded-xl"></video>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <input type="text" id="media-caption" placeholder="Ajouter une légende..." class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
+            <button type="button" onclick="confirmMediaSend()" class="bg-accent px-4 py-2.5 rounded-xl text-xs font-bold">Envoyer</button>
+        </div>
+    </div>
+
+    <!-- VISIONNEUSE PLEIN ÉCRAN -->
+    <div id="fullscreen-viewer" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
+        <div class="flex justify-end">
+            <button type="button" onclick="closeViewer()" class="text-white font-bold text-lg px-3 py-1">✕</button>
+        </div>
+        <div class="flex-1 flex items-center justify-center">
+            <img id="viewer-img" class="hidden max-w-full max-h-full rounded-xl object-contain">
+            <video id="viewer-vid" controls class="hidden max-w-full max-h-full rounded-xl"></video>
+        </div>
+        <p id="viewer-caption" class="text-center text-sm text-white mt-2"></p>
+    </div>
+
+    <!-- MODAL LIVE -->
+    <div id="live-stream-modal" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
+        <video id="live-camera-feed" autoplay playsinline muted class="w-full h-full object-cover rounded-2xl"></video>
+        <div class="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
+            <div class="flex justify-between items-center pointer-events-auto">
+                <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">LIVE</span>
+                <button type="button" onclick="stopLiveStream()" class="bg-black/70 text-white text-xs font-bold px-3 py-1.5 rounded-full">Quitter</button>
+            </div>
+            <div class="space-y-2 pointer-events-auto">
+                <div id="live-comments" class="max-h-36 overflow-y-auto space-y-1 text-xs text-white"></div>
+                <div class="flex space-x-2">
+                    <input type="text" id="live-chat-input" placeholder="Commenter le live..." class="flex-1 bg-black/70 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white">
+                    <button type="button" onclick="sendLiveComment()" class="bg-accent px-4 py-2 rounded-xl text-xs font-bold">Envoyer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THÈME -->
+    <div id="theme-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-card border border-gray-800 rounded-2xl p-5 w-full max-w-sm space-y-3">
+            <h3 class="font-bold text-sm">Choisir un thème</h3>
+            <button type="button" onclick="applyTheme('#0d0d0d', '#161616', '#FACC15', '#000000', '#ffffff')" class="w-full py-2.5 rounded-xl bg-yellow-400 text-black font-bold text-xs">Noir &amp; Or (Défaut)</button>
+            <button type="button" onclick="applyTheme('#0f172a', '#1e293b', '#38bdf8', '#000000', '#f8fafc')" class="w-full py-2.5 rounded-xl bg-sky-400 text-black font-bold text-xs">Bleu Nuit</button>
+            <button type="button" onclick="closeThemeModal()" class="w-full py-2 text-xs text-gray-400">Fermer</button>
+        </div>
+    </div>
+
+    <script src="./storage.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>
