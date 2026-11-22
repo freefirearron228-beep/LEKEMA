@@ -7,19 +7,18 @@
     <title>LEKEMA - App</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./style.css">
 </head>
 <body class="h-screen flex flex-col overflow-hidden select-none">
 
-    <!-- ÉCRAN D'AUTHENTIFICATION -->
+    <!-- ÉCRAN D'AUTHENTIFICATION PAR NUMÉRO DE TÉLÉPHONE -->
     <div id="auth-screen" class="fixed inset-0 bg-[#0d0d0d] z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full mx-auto bg-[#161616] border border-gray-800 rounded-3xl p-6 shadow-2xl">
             <div class="text-center mb-8 flex flex-col items-center">
                 <img src="./file_00000000227881f48510b7ce45188ed5.png" alt="Logo LEKEMA" class="w-24 h-24 rounded-3xl shadow-2xl border border-yellow-400/50 object-cover mb-3">
                 <h1 class="text-4xl font-black text-accent tracking-tight">LEKEMA</h1>
-                <p class="text-xs text-gray-400 mt-2">Connexion sécurisée par Gmail &amp; Pseudo</p>
+                <p class="text-xs text-gray-400 mt-2">Connexion par Numéro de téléphone &amp; Pseudo</p>
             </div>
 
             <div id="step-credentials" class="space-y-4">
@@ -30,19 +29,19 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1">Adresse Gmail</label>
-                    <input type="email" id="gmail-input" placeholder="Ex: nom@gmail.com" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400">
-                    <p id="gmail-error" class="hidden text-xs text-red-400 mt-1"></p>
+                    <label class="block text-xs text-gray-400 mb-1">Numéro de téléphone unique</label>
+                    <input type="tel" id="phone-input" placeholder="Ex: +228 90 00 00 00" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-yellow-400">
+                    <p id="phone-error" class="hidden text-xs text-red-400 mt-1"></p>
                 </div>
 
-                <button id="send-code-btn" type="button" onclick="requestGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition mt-2">
-                    Envoyer le code sur Gmail
+                <button id="send-code-btn" type="button" onclick="requestPhoneCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition mt-2">
+                    Envoyer le code de confirmation
                 </button>
             </div>
 
             <div id="step-otp" class="hidden space-y-4">
                 <p class="text-xs text-gray-300 text-center">
-                    Code envoyé à <span id="otp-target-gmail" class="text-accent font-semibold"></span>
+                    Code généré pour <span id="otp-target-phone" class="text-accent font-semibold"></span>
                 </p>
 
                 <div>
@@ -51,12 +50,12 @@
                     <p id="otp-error" class="hidden text-xs text-red-400 mt-1"></p>
                 </div>
 
-                <button type="button" onclick="verifyGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition">
+                <button type="button" onclick="verifyPhoneCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition">
                     Valider le code
                 </button>
 
                 <button type="button" onclick="backToCredentials()" class="w-full text-xs text-gray-400 py-2">
-                    Modifier le pseudo ou l'adresse Gmail
+                    Modifier le pseudo ou le numéro de téléphone
                 </button>
             </div>
         </div>
@@ -175,7 +174,7 @@
             </button>
         </main>
 
-        <!-- BARRE DE NAVIGATION BAS (DISCUSSIONS, STATUTS, LIVE, PROFIL) -->
+        <!-- BARRE DE NAVIGATION BAS -->
         <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5 text-xs font-semibold">
             <button type="button" onclick="switchTab('chats')" id="nav-chats" class="text-accent flex flex-col items-center">
                 <span class="text-lg">💬</span>
@@ -307,9 +306,9 @@
 
         <div class="p-4 space-y-3 overflow-y-auto flex-1">
             <div class="bg-card border border-gray-800 rounded-2xl p-3 space-y-2">
-                <p class="text-xs font-bold text-gray-300">Nouveau contact</p>
+                <p class="text-xs font-bold text-gray-300">Nouveau contact (Numéro ou @pseudo)</p>
                 <div class="flex space-x-2">
-                    <input type="text" id="new-contact-name" placeholder="Nom ou @pseudo" class="flex-1 bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-400">
+                    <input type="text" id="new-contact-name" placeholder="Ex: +228 90 00 00 00 ou @ami" class="flex-1 bg-black border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-400">
                     <button type="button" onclick="addNewContact()" class="bg-accent px-4 py-2 rounded-xl text-xs font-bold">Ajouter</button>
                 </div>
             </div>
