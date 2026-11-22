@@ -42,10 +42,15 @@ jobs:
             const manifestPath = "android/app/src/main/AndroidManifest.xml";
             if (fs.existsSync(manifestPath)) {
               let xml = fs.readFileSync(manifestPath, "utf8");
-              if (!xml.includes("android.permission.RECORD_AUDIO")) {
+              const perms = [
+                "<uses-permission android:name=\"android.permission.CAMERA\" />",
+                "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />",
+                "<uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\" />"
+              ].join("\n    ");
+              if (!xml.includes("android.permission.CAMERA")) {
                 xml = xml.replace(
                   /<application(\s|>)/,
-                  "<uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n    <uses-permission android:name=\"android.permission.MODIFY_AUDIO_SETTINGS\" />\n\n    <application$1"
+                  perms + "\n\n    <application$1"
                 );
                 fs.writeFileSync(manifestPath, xml, "utf8");
               }
