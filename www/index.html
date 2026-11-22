@@ -113,7 +113,7 @@
                 <h3 class="text-sm font-bold text-gray-300">Statuts</h3>
                 <label class="bg-accent px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer">
                     Ajouter un statut
-                    <input type="file" accept="image/*" onchange="addMyStatus(event)" class="hidden">
+                    <input type="file" accept="image/*,video/*" onchange="addMyStatus(event)" class="hidden">
                 </label>
             </div>
 
@@ -188,30 +188,51 @@
 
         <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center"></div>
 
-        <!-- PICKER ÉMOJIS RAPIDES -->
-        <div id="emoji-picker-bar" class="hidden bg-card border-t border-gray-800 px-3 py-2 flex items-center justify-around text-xl">
-            <button type="button" onclick="insertEmoji('😀')">😀</button>
-            <button type="button" onclick="insertEmoji('😂')">😂</button>
-            <button type="button" onclick="insertEmoji('❤️')">❤️</button>
-            <button type="button" onclick="insertEmoji('🔥')">🔥</button>
-            <button type="button" onclick="insertEmoji('👍')">👍</button>
-            <button type="button" onclick="insertEmoji('🙏')">🙏</button>
-            <button type="button" onclick="insertEmoji('🎉')">🎉</button>
+        <!-- MENU TROMBONE (OPTIONS ESSENTIELLES) -->
+        <div id="attach-menu-bar" class="hidden bg-[#16181d] border-t border-gray-800 px-4 py-3 grid grid-cols-3 gap-2 text-center text-xs">
+            <button type="button" onclick="triggerGalleryPicker()" class="bg-black/50 border border-gray-700/70 rounded-2xl py-3 flex flex-col items-center space-y-1">
+                <span class="text-xl">🖼️</span>
+                <span class="font-semibold text-gray-200">Photos &amp; Vidéos</span>
+            </button>
+            <button type="button" onclick="openCameraCaptureModal()" class="bg-black/50 border border-gray-700/70 rounded-2xl py-3 flex flex-col items-center space-y-1">
+                <span class="text-xl">📷</span>
+                <span class="font-semibold text-gray-200">Caméra</span>
+            </button>
+            <button type="button" onclick="triggerDocumentPicker()" class="bg-black/50 border border-gray-700/70 rounded-2xl py-3 flex flex-col items-center space-y-1">
+                <span class="text-xl">📄</span>
+                <span class="font-semibold text-gray-200">Document</span>
+            </button>
         </div>
+
+        <!-- SÉLECTEUR D'ÉMOJIS COMPLET -->
+        <div id="emoji-picker-bar" class="hidden bg-[#14171c] border-t border-gray-800 flex flex-col h-64">
+            <div class="px-3 pt-2 pb-1.5 flex items-center space-x-2 border-b border-gray-800/80">
+                <input type="text" id="emoji-search-input" oninput="renderEmojiGrid()" placeholder="Rechercher ou filtrer..." class="flex-1 bg-black/60 border border-gray-700 rounded-full px-3 py-1 text-xs text-white placeholder-gray-400 focus:outline-none">
+                <button type="button" onclick="toggleEmojiPicker()" class="text-xs text-gray-400 px-2 py-1">✕</button>
+            </div>
+
+            <div id="emoji-list-grid" class="flex-1 overflow-y-auto p-2.5 grid grid-cols-8 gap-1.5 text-2xl text-center"></div>
+
+            <div class="bg-black/70 border-t border-gray-800 px-2 py-1.5 flex justify-around text-base">
+                <button type="button" id="emoji-cat-faces" onclick="selectEmojiCategory('faces')" class="px-2 py-1 rounded-lg bg-white/10">😀</button>
+                <button type="button" id="emoji-cat-hearts" onclick="selectEmojiCategory('hearts')" class="px-2 py-1 rounded-lg">❤️</button>
+                <button type="button" id="emoji-cat-gestures" onclick="selectEmojiCategory('gestures')" class="px-2 py-1 rounded-lg">👍</button>
+                <button type="button" id="emoji-cat-objects" onclick="selectEmojiCategory('objects')" class="px-2 py-1 rounded-lg">🎉</button>
+                <button type="button" id="emoji-cat-flags" onclick="selectEmojiCategory('flags')" class="px-2 py-1 rounded-lg">🏳️</button>
+            </div>
+        </div>
+
+        <!-- INPUTS CACHÉS POUR MÉDIAS ET DOCUMENTS -->
+        <input type="file" id="gallery-media-input" accept="image/*,video/*" onchange="prepareMediaSend(event)" class="hidden">
+        <input type="file" id="doc-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar" onchange="prepareMediaSend(event)" class="hidden">
 
         <!-- BARRE D'ÉCRITURE STYLE MESSAGERIE -->
         <div id="normal-input-bar" class="px-3 py-2.5 flex items-center space-x-2">
             <div class="flex-1 bg-[#1e2229] border border-gray-700/80 rounded-full px-3.5 py-2 flex items-center space-x-2 shadow">
                 <button type="button" onclick="toggleEmojiPicker()" class="text-lg text-gray-300 hover:text-white shrink-0">☺️</button>
                 <input type="text" id="chat-input" oninput="updateChatActionButton()" placeholder="Message" class="flex-1 bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none min-w-0">
-                <label class="text-gray-300 hover:text-white cursor-pointer text-base shrink-0">
-                    📎
-                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx,.zip" onchange="prepareMediaSend(event)" class="hidden">
-                </label>
-                <label class="text-gray-300 hover:text-white cursor-pointer text-base shrink-0">
-                    📷
-                    <input type="file" accept="image/*" capture="environment" onchange="prepareMediaSend(event)" class="hidden">
-                </label>
+                <button type="button" onclick="toggleAttachMenu()" class="text-gray-300 hover:text-white text-base shrink-0" aria-label="Joindre un fichier">📎</button>
+                <button type="button" onclick="openCameraCaptureModal()" class="text-gray-300 hover:text-white text-base shrink-0" aria-label="Ouvrir la caméra">📷</button>
             </div>
 
             <!-- BOUTON MICRO CIRCULAIRE -->
@@ -242,6 +263,36 @@
         </div>
     </div>
 
+    <!-- MODAL CAPTURE CAMÉRA (PHOTO OU VIDÉO) -->
+    <div id="camera-capture-modal" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
+        <div class="flex justify-between items-center z-10">
+            <button type="button" onclick="closeCameraCaptureModal()" class="bg-black/60 text-white font-bold text-sm px-3 py-1.5 rounded-full">✕</button>
+            <span id="camera-mode-badge" class="bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full">MODE PHOTO</span>
+            <button type="button" onclick="switchCameraFacing()" class="bg-black/60 text-white font-bold text-sm px-3 py-1.5 rounded-full">🔄</button>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center my-2 relative overflow-hidden rounded-2xl bg-[#111]">
+            <video id="capture-video-preview" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            <canvas id="capture-photo-canvas" class="hidden"></canvas>
+            <span id="cam-rec-timer" class="hidden absolute top-3 left-3 bg-red-600 text-white text-xs font-mono font-bold px-2.5 py-1 rounded-full">00:00</span>
+        </div>
+
+        <div class="space-y-3 z-10">
+            <div class="flex justify-center space-x-4 text-xs font-bold">
+                <button type="button" id="mode-photo-btn" onclick="setCameraCaptureMode('photo')" class="px-4 py-1.5 rounded-full bg-accent text-black">Photo</button>
+                <button type="button" id="mode-video-btn" onclick="setCameraCaptureMode('video')" class="px-4 py-1.5 rounded-full bg-gray-800 text-white">Vidéo</button>
+            </div>
+
+            <div class="flex items-center justify-around py-2">
+                <button type="button" onclick="triggerGalleryPicker()" class="w-11 h-11 rounded-full bg-gray-800 text-white flex items-center justify-center text-lg">🖼️</button>
+
+                <button type="button" id="shutter-action-btn" onclick="handleCameraShutter()" class="w-16 h-16 rounded-full border-4 border-white bg-red-600 flex items-center justify-center shadow-xl active:scale-95 transition" aria-label="Capturer"></button>
+
+                <div class="w-11 h-11"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL PROFIL & DÉCONNEXION -->
     <div id="profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div class="bg-card border border-gray-800 rounded-2xl p-5 w-full max-w-sm space-y-4">
@@ -259,7 +310,7 @@
         </div>
     </div>
 
-    <!-- ÉDITEUR MÉDIA -->
+    <!-- ÉDITEUR MÉDIA (PRÉVISUALISATION + LÉGENDE) -->
     <div id="media-editor-modal" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
         <div class="flex justify-between items-center">
             <button type="button" onclick="closeMediaEditor()" class="text-white font-bold text-sm">Fermer</button>
