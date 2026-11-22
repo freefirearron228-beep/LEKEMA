@@ -65,24 +65,41 @@
     <!-- APPLICATION PRINCIPALE -->
     <div id="main-app" class="hidden h-full flex flex-col">
 
-        <!-- EN-TÊTE (NOM CENTRÉ AU MILIEU) -->
-        <header class="bg-card border-b border-gray-800 px-3 py-3 grid grid-cols-3 items-center">
-            <div class="flex items-center space-x-2 justify-start">
-                <button type="button" onclick="openProfilePage()" class="flex items-center space-x-2" aria-label="Ouvrir le profil">
-                    <img id="header-profile-photo" src="./file_00000000227881f48510b7ce45188ed5.png" alt="Profil LEKEMA" class="w-9 h-9 rounded-full object-cover border border-yellow-400/50 shrink-0">
-                    <span id="header-avatar" class="w-7 h-7 rounded-full bg-accent flex items-center justify-center font-black text-xs shrink-0">M</span>
-                </button>
+        <!-- EN-TÊTE : PARAMÈTRES & THÈME À GAUCHE, NOM CENTRÉ, TROIS POINTS À DROITE -->
+        <header class="bg-card border-b border-gray-800 px-3 py-3 grid grid-cols-3 items-center relative">
+            <div class="flex items-center space-x-1.5 justify-start">
+                <button type="button" onclick="openSettingsPage()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Paramètres</button>
+                <button type="button" onclick="openThemeModal()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
             </div>
 
             <div class="text-center truncate">
-                <h2 id="header-center-title" class="font-bold text-sm leading-tight truncate">LEKEMA</h2>
-                <span id="header-online-status" class="text-[10px] text-emerald-400 font-semibold block">En ligne</span>
+                <h2 id="header-center-title" class="font-bold text-sm tracking-wide truncate">LEKEMA</h2>
                 <span id="rec-badge-global" class="hidden text-[10px] text-red-400 font-semibold">Vocal en pause</span>
             </div>
 
-            <div class="flex items-center space-x-1.5 justify-end">
-                <button type="button" onclick="openSettingsPage()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Paramètres</button>
-                <button type="button" onclick="openThemeModal()" class="px-2.5 py-1.5 rounded-xl bg-black/40 border border-gray-700 text-xs font-semibold">Thème</button>
+            <div class="flex items-center justify-end relative">
+                <button type="button" onclick="toggleHeaderMoreMenu()" class="w-9 h-9 rounded-xl bg-black/40 border border-gray-700 flex items-center justify-center text-base font-bold" aria-label="Plus d'options">
+                    ⋮
+                </button>
+
+                <div id="header-more-menu" class="hidden absolute right-0 top-11 w-44 bg-[#181a20] border border-gray-700 rounded-2xl shadow-2xl py-1.5 z-30 text-xs">
+                    <button type="button" onclick="closeHeaderMoreMenu(); openProfilePage();" class="w-full px-3.5 py-2.5 text-left text-white hover:bg-white/10 flex items-center space-x-2">
+                        <span>👤</span>
+                        <span>Mon profil</span>
+                    </button>
+                    <button type="button" onclick="closeHeaderMoreMenu(); openContactsModal();" class="w-full px-3.5 py-2.5 text-left text-white hover:bg-white/10 flex items-center space-x-2">
+                        <span>👥</span>
+                        <span>Contacts</span>
+                    </button>
+                    <button type="button" onclick="closeHeaderMoreMenu(); openSettingsPage();" class="w-full px-3.5 py-2.5 text-left text-white hover:bg-white/10 flex items-center space-x-2">
+                        <span>⚙️</span>
+                        <span>Paramètres</span>
+                    </button>
+                    <button type="button" onclick="closeHeaderMoreMenu(); openThemeModal();" class="w-full px-3.5 py-2.5 text-left text-white hover:bg-white/10 flex items-center space-x-2">
+                        <span>🎨</span>
+                        <span>Thème</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -158,7 +175,7 @@
             </button>
         </main>
 
-        <!-- BARRE DE NAVIGATION BAS -->
+        <!-- BARRE DE NAVIGATION BAS (DISCUSSIONS, STATUTS, LIVE, PROFIL) -->
         <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5 text-xs font-semibold">
             <button type="button" onclick="switchTab('chats')" id="nav-chats" class="text-accent flex flex-col items-center">
                 <span class="text-lg">💬</span>
@@ -171,6 +188,10 @@
             <button type="button" onclick="switchTab('live')" id="nav-live" class="text-gray-500 flex flex-col items-center">
                 <span class="text-lg">📡</span>
                 <span class="text-[11px]">Live</span>
+            </button>
+            <button type="button" onclick="openProfilePage()" id="nav-profile" class="text-gray-500 flex flex-col items-center">
+                <span class="text-lg">👤</span>
+                <span class="text-[11px]">Profil</span>
             </button>
         </nav>
     </div>
