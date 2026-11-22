@@ -133,6 +133,69 @@ function logoutUser() {
     backToCredentials();
 }
 
+function applyMainWallpaperData(dataUrl) {
+    const mainApp = document.getElementById('main-app');
+    const tabChats = document.getElementById('tab-chats');
+    const bgValue = `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url('${dataUrl}')`;
+    if (mainApp) {
+        mainApp.style.backgroundImage = bgValue;
+        mainApp.style.backgroundSize = 'cover';
+        mainApp.style.backgroundPosition = 'center';
+    }
+    if (tabChats) {
+        tabChats.style.backgroundImage = bgValue;
+        tabChats.style.backgroundSize = 'cover';
+        tabChats.style.backgroundPosition = 'center';
+    }
+}
+
+function handleAndroidBackButton(e) {
+    const viewer = document.getElementById('fullscreen-viewer');
+    if (viewer && !viewer.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeViewer();
+        return true;
+    }
+
+    const editor = document.getElementById('media-editor-modal');
+    if (editor && !editor.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeMediaEditor();
+        return true;
+    }
+
+    const liveModal = document.getElementById('live-stream-modal');
+    if (liveModal && !liveModal.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        stopLiveStream();
+        return true;
+    }
+
+    const themeModal = document.getElementById('theme-modal');
+    if (themeModal && !themeModal.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeThemeModal();
+        return true;
+    }
+
+    const chatRoom = document.getElementById('chat-room');
+    if (chatRoom && !chatRoom.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeChat();
+        return true;
+    }
+
+    const tabStatus = document.getElementById('tab-status');
+    const tabLive = document.getElementById('tab-live');
+    if ((tabStatus && !tabStatus.classList.contains('hidden')) || (tabLive && !tabLive.classList.contains('hidden'))) {
+        if (e && e.preventDefault) e.preventDefault();
+        switchTab('chats');
+        return true;
+    }
+
+    return false;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-code-btn');
     if (sendBtn) {
@@ -141,6 +204,21 @@ window.addEventListener('DOMContentLoaded', () => {
             requestGmailCode();
         });
     }
+
+    document.addEventListener('backbutton', (e) => {
+        handleAndroidBackButton(e);
+    }, false);
+
+    try {
+        window.history.pushState({ lekemaApp: true }, '');
+        window.addEventListener('popstate', () => {
+            const handled = handleAndroidBackButton(null);
+            window.history.pushState({ lekemaApp: true }, '');
+            if (!handled && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+                window.Capacitor.Plugins.App.minimizeApp().catch(() => {});
+            }
+        });
+    } catch (err) {}
 
     const savedSession = window.LekemaStorage ? LekemaStorage.getSession() : null;
     if (savedSession && savedSession.username && savedSession.gmail) {
@@ -151,6 +229,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if (savedTheme) {
         applyTheme(savedTheme.bgMain, savedTheme.bgCard, savedTheme.accent, savedTheme.accentText, savedTheme.textMain, false);
     }
+
+    try {
+        const savedBg = localStorage.getItem('lekema_main_bg_v1');
+        if (savedBg) {
+            applyMainWallpaperData(savedBg);
+        }
+    } catch (err) {}
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -399,7 +484,12 @@ function changeMainWallpaper(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = e => { document.getElementById('tab-chats').style.backgroundImage = `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('${e.target.result}')`; };
+        reader.onload = e => {
+            applyMainWallpaperData(e.target.result);
+            try {
+                localStorage.setItem('lekema_main_bg_v1', e.target.result);
+            } catch (err) {}
+        };
         reader.readAsDataURL(file);
     }
 }
