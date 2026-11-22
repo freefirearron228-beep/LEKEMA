@@ -46,6 +46,7 @@ let currentUser = "Moi";
 let currentGmail = "";
 let currentMediaType = 'image';
 let currentVideoUrl = '';
+let currentVideoSegments = [];
 let baseImage = new Image();
 let isDrawing = false;
 let brushColor = '#000000';
@@ -54,6 +55,16 @@ let pendingAuth = null;
 let activeMessageAudio = null;
 let activeMessageBtn = null;
 let activeMessageUrl = '';
+
+let viewerScale = 1;
+let viewerTranslateX = 0;
+let viewerTranslateY = 0;
+let viewerPinchStartDist = 0;
+let viewerPinchStartScale = 1;
+let viewerPanStartX = 0;
+let viewerPanStartY = 0;
+let viewerIsPanning = false;
+let viewerLastTapTime = 0;
 
 function showFieldError(id, message) {
     const el = document.getElementById(id);
@@ -332,6 +343,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderEmojiGrid();
     updateBrushVisualState();
     updateChatActionButton();
+    initViewerZoomGestures();
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -462,8 +474,10 @@ let camFacingMode = 'environment';
 let camCaptureStream = null;
 let camMediaRecorder = null;
 let camVideoChunks = [];
+let recordedSegmentUrls = [];
 let isRecordingCamVideo = false;
 let isPausedCamVideo = false;
+let isSwitchingCameraDuringRec = false;
 let camRecSeconds = 0;
 let camRecTimerInterval = null;
 let shouldOpenEditorOnStop = false;
@@ -477,6 +491,7 @@ async function openCameraCaptureModal() {
     const modal = document.getElementById('camera-capture-modal');
     if (!modal) return;
     modal.classList.remove('hidden');
+    recordedSegmentUrls = [];
     setCameraCaptureMode(camCaptureMode);
     await startCameraStream();
 }
@@ -526,6 +541,7 @@ function stopCameraTimersAndStream() {
     }
     isRecordingCamVideo = false;
     isPausedCamVideo = false;
+    isSwitchingCameraDuringRec = false;
     camRecSeconds = 0;
 
     const hud = document.getElementById('cam-rec-hud');
@@ -544,6 +560,8 @@ function stopCameraTimersAndStream() {
 
 function closeCameraCaptureModal() {
     shouldOpenEditorOnStop = false;
+    isSwitchingCameraDuringRec = false;
+    recordedSegmentUrls = [];
     if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
         try { camMediaRecorder.stop(); } catch (e) {}
     }
@@ -581,25 +599,78 @@ async function setCameraCaptureMode(mode) {
     }
 }
 
+function createAndStartVideoSegmentRecorder() {
+    if (!camCaptureStream) return false;
+    try {
+        camMediaRecorder = new MediaRecorder(camCaptureStream);
+    } catch (e) {
+        alert("Enregistrement vidéo non supporté, utilisez la galerie.");
+        return false;
+    }
+
+    camVideoChunks = [];
+    camMediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) camVideoChunks.push(e.data);
+    };
+
+    camMediaRecorder.onstop = async () => {
+        if (camVideoChunks.length > 0) {
+            const blob = new Blob(camVideoChunks, { type: 'video/webm' });
+            if (blob.size > 0) {
+                recordedSegmentUrls.push(URL.createObjectURL(blob));
+            }
+        }
+        camVideoChunks = [];
+
+        if (isSwitchingCameraDuringRec) {
+            isSwitchingCameraDuringRec = false;
+            await startCameraStream();
+            if (isRecordingCamVideo && camCaptureStream) {
+                const started = createAndStartVideoSegmentRecorder();
+                if (started && isPausedCamVideo && camMediaRecorder && typeof camMediaRecorder.pause === 'function') {
+                    try { camMediaRecorder.pause(); } catch (err) {}
+                }
+            }
+            return;
+        }
+
+        const shouldOpen = shouldOpenEditorOnStop;
+        const shutterBtn = document.getElementById('shutter-action-btn');
+        if (shutterBtn) {
+            shutterBtn.className = "w-16 h-16 rounded-full border-4 border-white bg-red-600 flex items-center justify-center shadow-xl active:scale-95 transition";
+        }
+
+        const finalSegments = [...recordedSegmentUrls];
+        recordedSegmentUrls = [];
+        stopCameraTimersAndStream();
+
+        const modal = document.getElementById('camera-capture-modal');
+        if (modal) modal.classList.add('hidden');
+
+        if (shouldOpen && finalSegments.length > 0) {
+            openEditorWithVideoSegments(finalSegments);
+        }
+    };
+
+    camMediaRecorder.start(250);
+    return true;
+}
+
 async function switchCameraFacing() {
     camFacingMode = camFacingMode === 'environment' ? 'user' : 'environment';
 
-    if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state === 'recording') {
+    if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state !== 'inactive') {
+        isSwitchingCameraDuringRec = true;
         try {
-            if (typeof camMediaRecorder.pause === 'function') camMediaRecorder.pause();
-            isPausedCamVideo = true;
-            const pauseBtn = document.getElementById('pause-video-rec-btn');
-            if (pauseBtn) pauseBtn.innerText = "▶️ Reprendre";
-        } catch (e) {}
+            camMediaRecorder.stop();
+        } catch (e) {
+            isSwitchingCameraDuringRec = false;
+            await startCameraStream();
+        }
+        return;
     }
 
     await startCameraStream();
-
-    if (isRecordingCamVideo && camMediaRecorder && camMediaRecorder.state === 'paused' && !isPausedCamVideo) {
-        try {
-            if (typeof camMediaRecorder.resume === 'function') camMediaRecorder.resume();
-        } catch (e) {}
-    }
 }
 
 function handleCameraShutter() {
@@ -656,39 +727,14 @@ function toggleVideoCaptureFromStream() {
 
     if (!isRecordingCamVideo) {
         if (!camCaptureStream) return;
-        try {
-            camMediaRecorder = new MediaRecorder(camCaptureStream);
-        } catch (e) {
-            alert("Enregistrement vidéo non supporté, utilisez la galerie.");
-            return;
-        }
-
-        camVideoChunks = [];
+        recordedSegmentUrls = [];
         shouldOpenEditorOnStop = true;
         isPausedCamVideo = false;
+        isSwitchingCameraDuringRec = false;
 
-        camMediaRecorder.ondataavailable = e => {
-            if (e.data && e.data.size > 0) camVideoChunks.push(e.data);
-        };
+        const ok = createAndStartVideoSegmentRecorder();
+        if (!ok) return;
 
-        camMediaRecorder.onstop = () => {
-            const shouldOpen = shouldOpenEditorOnStop;
-            const blob = new Blob(camVideoChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-
-            if (shutterBtn) {
-                shutterBtn.className = "w-16 h-16 rounded-full border-4 border-white bg-red-600 flex items-center justify-center shadow-xl active:scale-95 transition";
-            }
-            stopCameraTimersAndStream();
-            const modal = document.getElementById('camera-capture-modal');
-            if (modal) modal.classList.add('hidden');
-
-            if (shouldOpen && blob.size > 0) {
-                openEditorWithVideoUrl(url);
-            }
-        };
-
-        camMediaRecorder.start(250);
         isRecordingCamVideo = true;
         camRecSeconds = 0;
 
@@ -715,23 +761,50 @@ function toggleVideoCaptureFromStream() {
         }, 1000);
     } else {
         shouldOpenEditorOnStop = true;
+        isSwitchingCameraDuringRec = false;
         if (camMediaRecorder && camMediaRecorder.state !== 'inactive') {
             camMediaRecorder.stop();
+        } else {
+            const finalSegments = [...recordedSegmentUrls];
+            recordedSegmentUrls = [];
+            stopCameraTimersAndStream();
+            const modal = document.getElementById('camera-capture-modal');
+            if (modal) modal.classList.add('hidden');
+            if (finalSegments.length > 0) openEditorWithVideoSegments(finalSegments);
         }
     }
+}
+
+function attachMultiSegmentPlayback(vidEl, segments) {
+    if (!vidEl || !Array.isArray(segments) || segments.length === 0) return;
+    let idx = 0;
+    vidEl.src = segments[0];
+    vidEl.currentTime = 0;
+    vidEl.onended = () => {
+        idx++;
+        if (idx < segments.length) {
+            vidEl.src = segments[idx];
+            vidEl.currentTime = 0;
+            vidEl.play().catch(() => {});
+        }
+    };
 }
 
 function openEditorWithImageData(dataUrl) {
     if (!ctx) return;
     currentMediaType = 'image';
+    currentVideoSegments = [];
+    currentVideoUrl = '';
     document.getElementById('media-caption').value = '';
     document.getElementById('editor-emoji-bar').classList.add('hidden');
     document.getElementById('media-editor-modal').classList.remove('hidden');
     const vid = document.getElementById('preview-video');
     if (vid) {
         vid.pause();
+        vid.onended = null;
         vid.currentTime = 0;
-        vid.src = '';
+        vid.removeAttribute('src');
+        vid.load();
         vid.classList.add('hidden');
     }
     canvas.classList.remove('hidden');
@@ -745,9 +818,10 @@ function openEditorWithImageData(dataUrl) {
     baseImage.src = dataUrl;
 }
 
-function openEditorWithVideoUrl(videoUrl) {
+function openEditorWithVideoSegments(segments) {
     currentMediaType = 'video';
-    currentVideoUrl = videoUrl;
+    currentVideoSegments = Array.isArray(segments) ? segments : [segments];
+    currentVideoUrl = currentVideoSegments[0] || '';
     document.getElementById('media-caption').value = '';
     document.getElementById('editor-emoji-bar').classList.add('hidden');
     document.getElementById('media-editor-modal').classList.remove('hidden');
@@ -755,10 +829,13 @@ function openEditorWithVideoUrl(videoUrl) {
     document.getElementById('brush-tools').classList.add('hidden');
     const vid = document.getElementById('preview-video');
     if (vid) {
-        vid.src = currentVideoUrl;
-        vid.currentTime = 0;
+        attachMultiSegmentPlayback(vid, currentVideoSegments);
         vid.classList.remove('hidden');
     }
+}
+
+function openEditorWithVideoUrl(videoUrl) {
+    openEditorWithVideoSegments([videoUrl]);
 }
 
 function updateChatActionButton() {
@@ -1217,6 +1294,7 @@ function stopAndResetEditorVideo() {
     const vid = document.getElementById('preview-video');
     if (vid) {
         vid.pause();
+        vid.onended = null;
         vid.currentTime = 0;
         vid.removeAttribute('src');
         vid.load();
@@ -1226,6 +1304,8 @@ function stopAndResetEditorVideo() {
 
 function closeMediaEditor() {
     stopAndResetEditorVideo();
+    currentVideoSegments = [];
+    currentVideoUrl = '';
     const emojiBar = document.getElementById('editor-emoji-bar');
     if (emojiBar) emojiBar.classList.add('hidden');
     document.getElementById('media-editor-modal').classList.add('hidden');
@@ -1239,30 +1319,161 @@ function confirmMediaSend() {
     div.className = 'flex justify-end';
     if (currentMediaType === 'image' && canvas) {
         const url = canvas.toDataURL('image/jpeg', 0.85);
-        div.innerHTML = `<div onclick="openViewer('image', '${url}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
+        const safeUrl = encodeURIComponent(url);
+        const safeCaption = encodeURIComponent(caption);
+        div.innerHTML = `<div onclick="openEncodedViewer('image', '${safeUrl}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
     } else {
-        const videoToSend = currentVideoUrl;
-        div.innerHTML = `<div onclick="openViewer('video', '${videoToSend}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${videoToSend}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
+        const segmentsToSend = currentVideoSegments.length > 0 ? [...currentVideoSegments] : [currentVideoUrl];
+        const firstUrl = segmentsToSend[0] || '';
+        const encodedSegments = encodeURIComponent(JSON.stringify(segmentsToSend));
+        const safeCaption = encodeURIComponent(caption);
+        div.innerHTML = `<div onclick="openEncodedViewer('video', '${encodedSegments}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${firstUrl}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
     }
     area.appendChild(div);
     area.scrollTop = area.scrollHeight;
     closeMediaEditor();
 }
 
-function openViewer(type, src, caption) {
+function openEncodedViewer(type, encodedPayload, encodedCaption) {
+    const caption = decodeURIComponent(encodedCaption || '');
+    if (type === 'image') {
+        openViewer('image', decodeURIComponent(encodedPayload || ''), caption);
+    } else {
+        let parsed = [];
+        try {
+            parsed = JSON.parse(decodeURIComponent(encodedPayload || '[]'));
+        } catch (e) {
+            parsed = [];
+        }
+        openViewer('video', parsed, caption);
+    }
+}
+
+function applyViewerTransform() {
+    const img = document.getElementById('viewer-img');
+    const resetBtn = document.getElementById('reset-zoom-btn');
+    if (!img) return;
+
+    if (viewerScale <= 1) {
+        viewerScale = 1;
+        viewerTranslateX = 0;
+        viewerTranslateY = 0;
+    }
+
+    img.style.transform = `translate3d(${viewerTranslateX}px, ${viewerTranslateY}px, 0) scale(${viewerScale})`;
+    if (resetBtn) {
+        if (viewerScale > 1.05) {
+            resetBtn.classList.remove('hidden');
+            resetBtn.innerText = `${viewerScale.toFixed(1).replace(/\.0$/, '')}x ↺`;
+        } else {
+            resetBtn.classList.add('hidden');
+        }
+    }
+}
+
+function resetViewerZoom() {
+    viewerScale = 1;
+    viewerTranslateX = 0;
+    viewerTranslateY = 0;
+    applyViewerTransform();
+}
+
+function getTouchDistance(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.hypot(dx, dy);
+}
+
+function initViewerZoomGestures() {
+    const stage = document.getElementById('viewer-stage');
+    if (!stage) return;
+
+    stage.addEventListener('touchstart', (e) => {
+        const img = document.getElementById('viewer-img');
+        if (!img || img.classList.contains('hidden')) return;
+
+        if (e.touches.length === 2) {
+            viewerIsPanning = false;
+            viewerPinchStartDist = getTouchDistance(e.touches[0], e.touches[1]);
+            viewerPinchStartScale = viewerScale;
+        } else if (e.touches.length === 1) {
+            const now = Date.now();
+            if (now - viewerLastTapTime < 280) {
+                e.preventDefault();
+                if (viewerScale > 1.05) {
+                    resetViewerZoom();
+                } else {
+                    viewerScale = 2.5;
+                    viewerTranslateX = 0;
+                    viewerTranslateY = 0;
+                    applyViewerTransform();
+                }
+                viewerLastTapTime = 0;
+                return;
+            }
+            viewerLastTapTime = now;
+
+            if (viewerScale > 1) {
+                viewerIsPanning = true;
+                viewerPanStartX = e.touches[0].clientX - viewerTranslateX;
+                viewerPanStartY = e.touches[0].clientY - viewerTranslateY;
+            }
+        }
+    }, { passive: false });
+
+    stage.addEventListener('touchmove', (e) => {
+        const img = document.getElementById('viewer-img');
+        if (!img || img.classList.contains('hidden')) return;
+
+        if (e.touches.length === 2 && viewerPinchStartDist > 0) {
+            e.preventDefault();
+            const currentDist = getTouchDistance(e.touches[0], e.touches[1]);
+            const nextScale = viewerPinchStartScale * (currentDist / viewerPinchStartDist);
+            viewerScale = Math.max(1, Math.min(4, nextScale));
+            if (viewerScale === 1) {
+                viewerTranslateX = 0;
+                viewerTranslateY = 0;
+            }
+            applyViewerTransform();
+        } else if (e.touches.length === 1 && viewerIsPanning && viewerScale > 1) {
+            e.preventDefault();
+            const maxPanX = (stage.clientWidth * (viewerScale - 1)) / 2 + 60;
+            const maxPanY = (stage.clientHeight * (viewerScale - 1)) / 2 + 60;
+            const rawX = e.touches[0].clientX - viewerPanStartX;
+            const rawY = e.touches[0].clientY - viewerPanStartY;
+            viewerTranslateX = Math.max(-maxPanX, Math.min(maxPanX, rawX));
+            viewerTranslateY = Math.max(-maxPanY, Math.min(maxPanY, rawY));
+            applyViewerTransform();
+        }
+    }, { passive: false });
+
+    stage.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            viewerPinchStartDist = 0;
+        }
+        if (e.touches.length === 0) {
+            viewerIsPanning = false;
+        }
+    });
+}
+
+function openViewer(type, srcOrSegments, caption) {
     const img = document.getElementById('viewer-img');
     const vid = document.getElementById('viewer-vid');
     document.getElementById('viewer-caption').innerText = caption || '';
+    resetViewerZoom();
+
     if (type === 'image') {
         vid.classList.add('hidden');
         vid.pause();
+        vid.onended = null;
         vid.currentTime = 0;
-        img.src = src;
+        img.src = srcOrSegments;
         img.classList.remove('hidden');
     } else {
         img.classList.add('hidden');
-        vid.src = src;
-        vid.currentTime = 0;
+        const segs = Array.isArray(srcOrSegments) ? srcOrSegments : [srcOrSegments];
+        attachMultiSegmentPlayback(vid, segs);
         vid.classList.remove('hidden');
         vid.play().catch(() => {});
     }
@@ -1270,9 +1481,11 @@ function openViewer(type, src, caption) {
 }
 
 function closeViewer() {
+    resetViewerZoom();
     const vid = document.getElementById('viewer-vid');
     if (vid) {
         vid.pause();
+        vid.onended = null;
         vid.currentTime = 0;
         vid.removeAttribute('src');
         vid.load();
