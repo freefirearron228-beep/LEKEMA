@@ -1,10 +1,3 @@
-const EMAILJS_CONFIG = {
-    ENABLED: false,
-    PUBLIC_KEY: "TA_CLE_PUBLIQUE_EMAILJS",
-    SERVICE_ID: "TON_SERVICE_ID",
-    TEMPLATE_ID: "TON_TEMPLATE_ID"
-};
-
 const EMOJI_CATEGORIES = {
     faces: [
         "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘",
@@ -48,7 +41,7 @@ const CONTACTS_STORAGE_KEY = "lekema_contacts_list_v1";
 
 let currentEmojiCategory = 'faces';
 let currentUser = "Moi";
-let currentGmail = "";
+let currentPhone = "";
 let currentMediaType = 'image';
 let currentVideoUrl = '';
 let currentVideoSegments = [];
@@ -161,7 +154,7 @@ function syncProfileAndPrivacyUI() {
     if (pName) pName.value = userProfile.name || "";
     if (pInfo) pInfo.value = userProfile.info || "";
     if (pHandle) pHandle.value = userProfile.handle || "";
-    if (pPhone) pPhone.value = userProfile.phone || "";
+    if (pPhone) pPhone.value = userProfile.phone || currentPhone || "";
     if (pLinks) pLinks.value = userProfile.links || "";
 
     const onlineCheck = document.getElementById('setting-online-presence');
@@ -213,7 +206,10 @@ function saveProfileDetails() {
         const rawHandle = pHandle.value.trim();
         userProfile.handle = rawHandle ? (rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle) : "";
     }
-    if (pPhone) userProfile.phone = pPhone.value.trim();
+    if (pPhone) {
+        userProfile.phone = pPhone.value.trim();
+        if (userProfile.phone) currentPhone = userProfile.phone;
+    }
     if (pLinks) userProfile.links = pLinks.value.trim();
 
     persistProfileData();
@@ -347,18 +343,22 @@ function showFieldError(id, message) {
 }
 
 function clearAuthErrors() {
-    ['username-error', 'gmail-error', 'otp-error'].forEach(id => {
+    ['username-error', 'phone-error', 'otp-error'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 }
 
-function requestGmailCode() {
+function normalizePhone(rawPhone) {
+    return String(rawPhone || '').replace(/\s+/g, '').trim();
+}
+
+function requestPhoneCode() {
     clearAuthErrors();
     const usernameInput = document.getElementById('username-input');
-    const gmailInput = document.getElementById('gmail-input');
+    const phoneInput = document.getElementById('phone-input');
     const username = usernameInput ? usernameInput.value.trim() : '';
-    const gmail = gmailInput ? gmailInput.value.trim().toLowerCase() : '';
+    const phone = normalizePhone(phoneInput ? phoneInput.value : '');
 
     const pseudoRegex = /^[a-zA-Z0-9À-ÿ ._-]{3,24}$/;
     if (!pseudoRegex.test(username)) {
@@ -366,15 +366,15 @@ function requestGmailCode() {
         return;
     }
 
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!gmailRegex.test(gmail)) {
-        showFieldError('gmail-error', "Veuillez entrer une adresse @gmail.com valide.");
+    const phoneRegex = /^\+?[0-9]{7,16}$/;
+    if (!phoneRegex.test(phone)) {
+        showFieldError('phone-error', "Entrez un numéro de téléphone valide (ex: +228 90 00 00 00).");
         return;
     }
 
     if (window.LekemaStorage && typeof LekemaStorage.isPseudoTaken === 'function') {
-        if (LekemaStorage.isPseudoTaken(username, gmail)) {
-            showFieldError('username-error', "Ce pseudo est déjà pris par un autre utilisateur.");
+        if (LekemaStorage.isPseudoTaken(username, phone)) {
+            showFieldError('username-error', "Ce pseudo est déjà pris par un autre numéro.");
             return;
         }
     }
@@ -382,31 +382,23 @@ function requestGmailCode() {
     const code = String(Math.floor(100000 + Math.random() * 900000));
     pendingAuth = {
         username,
-        gmail,
+        phone,
         code,
         expiresAt: Date.now() + 5 * 60 * 1000
     };
 
-    const targetEl = document.getElementById('otp-target-gmail');
+    const targetEl = document.getElementById('otp-target-phone');
     const otpInput = document.getElementById('otp-input');
     const stepCred = document.getElementById('step-credentials');
     const stepOtp = document.getElementById('step-otp');
 
-    if (targetEl) targetEl.innerText = `${gmail} (Code test : ${code})`;
+    if (targetEl) targetEl.innerText = `${phone} (Code : ${code})`;
     if (otpInput) otpInput.value = '';
     if (stepCred) stepCred.classList.add('hidden');
     if (stepOtp) stepOtp.classList.remove('hidden');
-
-    if (EMAILJS_CONFIG.ENABLED && window.emailjs && typeof emailjs.send === 'function') {
-        emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
-            to_email: gmail,
-            to_name: username,
-            otp_code: code
-        }, EMAILJS_CONFIG.PUBLIC_KEY).catch(() => {});
-    }
 }
 
-function verifyGmailCode() {
+function verifyPhoneCode() {
     clearAuthErrors();
     if (!pendingAuth) {
         backToCredentials();
@@ -418,13 +410,13 @@ function verifyGmailCode() {
     }
     const enteredCode = document.getElementById('otp-input').value.trim();
     if (enteredCode !== pendingAuth.code) {
-        showFieldError('otp-error', "Code incorrect. Vérifiez votre Gmail et réessayez.");
+        showFieldError('otp-error', "Code incorrect. Réessayez.");
         return;
     }
 
     const sessionData = {
         username: pendingAuth.username,
-        gmail: pendingAuth.gmail,
+        phone: pendingAuth.phone,
         verifiedAt: Date.now()
     };
 
@@ -445,11 +437,14 @@ function backToCredentials() {
 
 function activateMainApp(sessionData) {
     currentUser = sessionData.username;
-    currentGmail = sessionData.gmail || "";
+    currentPhone = sessionData.phone || "";
     if (!userProfile.name || userProfile.name === "Malik") {
         userProfile.name = currentUser;
-        persistProfileData();
     }
+    if (currentPhone) {
+        userProfile.phone = currentPhone;
+    }
+    persistProfileData();
     syncProfileAndPrivacyUI();
 
     document.getElementById('auth-screen').classList.add('hidden');
@@ -597,7 +592,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (sendBtn) {
         sendBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            requestGmailCode();
+            requestPhoneCode();
         });
     }
 
@@ -625,7 +620,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch (err) {}
 
     const savedSession = window.LekemaStorage ? LekemaStorage.getSession() : null;
-    if (savedSession && savedSession.username && savedSession.gmail) {
+    if (savedSession && savedSession.username && savedSession.phone) {
         activateMainApp(savedSession);
     }
 
