@@ -155,15 +155,15 @@
         <!-- BARRE DE NAVIGATION BAS -->
         <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5 text-xs font-semibold">
             <button type="button" onclick="switchTab('chats')" id="nav-chats" class="text-accent flex flex-col items-center">
-                <span class="text-lg">💭</span>
+                <span class="text-lg">💬</span>
                 <span class="text-[11px]">Discussions</span>
             </button>
             <button type="button" onclick="switchTab('status')" id="nav-status" class="text-gray-500 flex flex-col items-center">
-                <span class="text-lg">🟢</span>
+                <span class="text-lg">⭕</span>
                 <span class="text-[11px]">Statuts</span>
             </button>
             <button type="button" onclick="switchTab('live')" id="nav-live" class="text-gray-500 flex flex-col items-center">
-                <span class="text-lg">🎥</span>
+                <span class="text-lg">📡</span>
                 <span class="text-[11px]">Live</span>
             </button>
         </nav>
@@ -188,7 +188,7 @@
 
         <div id="messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 bg-cover bg-center"></div>
 
-        <!-- MENU TROMBONE (OPTIONS ESSENTIELLES) -->
+        <!-- MENU TROMBONE -->
         <div id="attach-menu-bar" class="hidden bg-[#16181d] border-t border-gray-800 px-4 py-3 grid grid-cols-3 gap-2 text-center text-xs">
             <button type="button" onclick="triggerGalleryPicker()" class="bg-black/50 border border-gray-700/70 rounded-2xl py-3 flex flex-col items-center space-y-1">
                 <span class="text-xl">🖼️</span>
@@ -242,7 +242,7 @@
                 </svg>
             </button>
 
-            <!-- BOUTON ENVOYER (VISIBLE QUAND DU TEXTE EST SAISI) -->
+            <!-- BOUTON ENVOYER -->
             <button type="button" id="send-text-btn" onclick="sendChatMessage()" class="hidden h-12 px-4 rounded-full bg-accent text-xs font-bold shadow-lg shrink-0 active:scale-95 transition">
                 Envoyer
             </button>
@@ -268,19 +268,23 @@
         <div class="flex justify-between items-center z-10">
             <button type="button" onclick="closeCameraCaptureModal()" class="bg-black/60 text-white font-bold text-sm px-3 py-1.5 rounded-full">✕</button>
             <span id="camera-mode-badge" class="bg-black/60 text-white text-xs font-bold px-3 py-1 rounded-full">MODE PHOTO</span>
-            <button type="button" onclick="switchCameraFacing()" class="bg-black/60 text-white font-bold text-sm px-3 py-1.5 rounded-full">🔄</button>
+            <button type="button" id="switch-camera-btn" onclick="switchCameraFacing()" class="bg-black/60 text-white font-bold text-sm px-3 py-1.5 rounded-full active:scale-90 transition">🔄</button>
         </div>
 
         <div class="flex-1 flex items-center justify-center my-2 relative overflow-hidden rounded-2xl bg-[#111]">
             <video id="capture-video-preview" autoplay playsinline muted class="w-full h-full object-cover"></video>
             <canvas id="capture-photo-canvas" class="hidden"></canvas>
-            <span id="cam-rec-timer" class="hidden absolute top-3 left-3 bg-red-600 text-white text-xs font-mono font-bold px-2.5 py-1 rounded-full">00:00</span>
+            <div class="hidden absolute top-3 left-3 flex items-center space-x-2 bg-black/70 px-3 py-1 rounded-full" id="cam-rec-hud">
+                <span id="cam-rec-dot" class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <span id="cam-rec-timer" class="text-white text-xs font-mono font-bold">00:00</span>
+            </div>
         </div>
 
         <div class="space-y-3 z-10">
-            <div class="flex justify-center space-x-4 text-xs font-bold">
+            <div class="flex justify-center items-center space-x-3 text-xs font-bold">
                 <button type="button" id="mode-photo-btn" onclick="setCameraCaptureMode('photo')" class="px-4 py-1.5 rounded-full bg-accent text-black">Photo</button>
                 <button type="button" id="mode-video-btn" onclick="setCameraCaptureMode('video')" class="px-4 py-1.5 rounded-full bg-gray-800 text-white">Vidéo</button>
+                <button type="button" id="pause-video-rec-btn" onclick="togglePauseVideoRecording()" class="hidden px-3.5 py-1.5 rounded-full bg-yellow-500 text-black active:scale-95 transition">⏸️ Pause</button>
             </div>
 
             <div class="flex items-center justify-around py-2">
@@ -310,15 +314,15 @@
         </div>
     </div>
 
-    <!-- ÉDITEUR MÉDIA (PRÉVISUALISATION + LÉGENDE) -->
+    <!-- ÉDITEUR MÉDIA (PRÉVISUALISATION + COULEURS + ÉMOJIS + LÉGENDE) -->
     <div id="media-editor-modal" class="hidden fixed inset-0 bg-black z-50 flex flex-col justify-between p-4">
-        <div class="flex justify-between items-center">
-            <button type="button" onclick="closeMediaEditor()" class="text-white font-bold text-sm">Fermer</button>
-            <div id="brush-tools" class="flex items-center space-x-2">
-                <button type="button" onclick="setBrushColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-white"></button>
-                <button type="button" onclick="setBrushColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500"></button>
-                <button type="button" onclick="setBrushColor('#facc15')" class="w-6 h-6 rounded-full bg-yellow-400"></button>
-                <button type="button" onclick="clearCanvas()" class="text-xs text-gray-300 px-2 py-1 bg-gray-800 rounded">Effacer</button>
+        <div class="flex justify-between items-center space-x-2">
+            <button type="button" onclick="closeMediaEditor()" class="text-white font-bold text-sm px-2 py-1 rounded bg-white/10 active:scale-95 transition">Fermer</button>
+            <div id="brush-tools" class="flex items-center space-x-3 bg-white/10 px-3 py-1.5 rounded-full">
+                <button type="button" id="color-btn-black" onclick="setBrushColor('#000000')" class="w-7 h-7 rounded-full bg-black border-2 border-gray-300 ring-2 ring-white scale-110 transition-all duration-150" aria-label="Noir"></button>
+                <button type="button" id="color-btn-red" onclick="setBrushColor('#ef4444')" class="w-7 h-7 rounded-full bg-red-500 border-2 border-transparent opacity-80 transition-all duration-150" aria-label="Rouge"></button>
+                <button type="button" id="color-btn-yellow" onclick="setBrushColor('#facc15')" class="w-7 h-7 rounded-full bg-yellow-400 border-2 border-transparent opacity-80 transition-all duration-150" aria-label="Jaune"></button>
+                <button type="button" onclick="clearCanvas()" class="text-xs font-semibold text-gray-200 px-2.5 py-1 bg-black/60 rounded-full active:scale-95 transition">Effacer</button>
             </div>
         </div>
 
@@ -327,9 +331,24 @@
             <video id="preview-video" controls class="hidden max-w-full max-h-full rounded-xl"></video>
         </div>
 
-        <div class="flex items-center space-x-2">
-            <input type="text" id="media-caption" placeholder="Ajouter une légende..." class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-white">
-            <button type="button" onclick="confirmMediaSend()" class="bg-accent px-4 py-2.5 rounded-xl text-xs font-bold">Envoyer</button>
+        <div class="space-y-2">
+            <div id="editor-emoji-bar" class="hidden bg-[#1a1d24] border border-gray-700 rounded-2xl px-2.5 py-2 flex justify-around text-xl">
+                <button type="button" onclick="insertEditorEmoji('😀')" class="active:scale-125 transition">😀</button>
+                <button type="button" onclick="insertEditorEmoji('😂')" class="active:scale-125 transition">😂</button>
+                <button type="button" onclick="insertEditorEmoji('❤️')" class="active:scale-125 transition">❤️</button>
+                <button type="button" onclick="insertEditorEmoji('🔥')" class="active:scale-125 transition">🔥</button>
+                <button type="button" onclick="insertEditorEmoji('👍')" class="active:scale-125 transition">👍</button>
+                <button type="button" onclick="insertEditorEmoji('🎉')" class="active:scale-125 transition">🎉</button>
+                <button type="button" onclick="insertEditorEmoji('✨')" class="active:scale-125 transition">✨</button>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <div class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 flex items-center space-x-2">
+                    <button type="button" onclick="toggleEditorEmojiBar()" class="text-lg shrink-0 active:scale-90 transition" aria-label="Émojis légende">😊</button>
+                    <input type="text" id="media-caption" placeholder="Ajouter une légende..." class="flex-1 bg-transparent text-sm text-white focus:outline-none min-w-0">
+                </div>
+                <button type="button" onclick="confirmMediaSend()" class="bg-accent px-4 py-2.5 rounded-xl text-xs font-bold shrink-0 active:scale-95 transition">Envoyer</button>
+            </div>
         </div>
     </div>
 
