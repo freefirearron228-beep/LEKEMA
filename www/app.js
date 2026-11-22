@@ -6,6 +6,7 @@ const EMAILJS_CONFIG = {
 };
 
 let currentUser = "Moi";
+let currentGmail = "";
 let currentMediaType = 'image';
 let currentVideoUrl = '';
 let baseImage = new Image();
@@ -119,12 +120,34 @@ function backToCredentials() {
 
 function activateMainApp(sessionData) {
     currentUser = sessionData.username;
-    document.getElementById('header-avatar').innerText = currentUser.charAt(0).toUpperCase();
+    currentGmail = sessionData.gmail || "";
+    const initial = currentUser.charAt(0).toUpperCase() || "M";
+    const avatarEl = document.getElementById('header-avatar');
+    const modalAvatarEl = document.getElementById('profile-modal-avatar');
+    const modalNameEl = document.getElementById('profile-modal-name');
+    const modalGmailEl = document.getElementById('profile-modal-gmail');
+
+    if (avatarEl) avatarEl.innerText = initial;
+    if (modalAvatarEl) modalAvatarEl.innerText = initial;
+    if (modalNameEl) modalNameEl.innerText = currentUser;
+    if (modalGmailEl) modalGmailEl.innerText = currentGmail || "Compte connecté";
+
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
 }
 
+function openProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 function logoutUser() {
+    closeProfileModal();
     if (window.LekemaStorage) {
         LekemaStorage.clearSession();
     }
@@ -171,10 +194,24 @@ function handleAndroidBackButton(e) {
         return true;
     }
 
+    const profileModal = document.getElementById('profile-modal');
+    if (profileModal && !profileModal.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeProfileModal();
+        return true;
+    }
+
     const themeModal = document.getElementById('theme-modal');
     if (themeModal && !themeModal.classList.contains('hidden')) {
         if (e && e.preventDefault) e.preventDefault();
         closeThemeModal();
+        return true;
+    }
+
+    const emojiBar = document.getElementById('emoji-picker-bar');
+    if (emojiBar && !emojiBar.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        emojiBar.classList.add('hidden');
         return true;
     }
 
@@ -237,6 +274,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     } catch (err) {}
 
+    updateChatActionButton();
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
@@ -260,6 +299,35 @@ async function triggerAppInstall() {
     deferredPrompt = null;
 }
 
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker-bar');
+    if (!picker) return;
+    picker.classList.toggle('hidden');
+}
+
+function insertEmoji(emoji) {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    input.value = (input.value || '') + emoji;
+    input.focus();
+    updateChatActionButton();
+}
+
+function updateChatActionButton() {
+    const input = document.getElementById('chat-input');
+    const micBtn = document.getElementById('mic-circle-btn');
+    const sendBtn = document.getElementById('send-text-btn');
+    if (!input || !micBtn || !sendBtn) return;
+
+    if (input.value.trim().length > 0) {
+        micBtn.classList.add('hidden');
+        sendBtn.classList.remove('hidden');
+    } else {
+        sendBtn.classList.add('hidden');
+        micBtn.classList.remove('hidden');
+    }
+}
+
 let mediaRecorder = null;
 let audioStream = null;
 let audioChunks = [];
@@ -268,13 +336,45 @@ let recSeconds = 0;
 let recTimerInterval = null;
 let previewAudioObj = null;
 
+async function ensureMicrophonePermission() {
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        try {
+            if (window.Capacitor.Plugins && window.Capacitor.Plugins.Permissions) {
+                const status = await window.Capacitor.Plugins.Permissions.query({ name: 'microphone' });
+                if (status.state !== 'granted') {
+                    const req = await window.Capacitor.Plugins.Permissions.request({ name: 'microphone' });
+                    if (req.state !== 'granted') return false;
+                }
+            }
+        } catch (err) {}
+    }
+    return true;
+}
+
 async function startVoiceStudio() {
     try {
-        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const permitted = await ensureMicrophonePermission();
+        if (!permitted) {
+            alert("Autorisez le microphone pour enregistrer.");
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Enregistrement audio non pris en charge sur cet appareil.");
+            return;
+        }
+
+        audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true
+            }
+        });
+
         mediaRecorder = new MediaRecorder(audioStream);
         audioChunks = [];
 
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
         mediaRecorder.start(200);
 
         voiceState = 'recording';
@@ -284,6 +384,7 @@ async function startVoiceStudio() {
             if (voiceState === 'recording') { recSeconds++; updateTimerDisplay(); }
         }, 1000);
 
+        document.getElementById('emoji-picker-bar').classList.add('hidden');
         document.getElementById('normal-input-bar').classList.add('hidden');
         document.getElementById('voice-studio-bar').classList.remove('hidden');
         setUIStateRecording();
@@ -305,19 +406,19 @@ function setUIStatePaused() {
     document.getElementById('rec-indicator').classList.remove('rec-dot', 'bg-red-500');
     document.getElementById('rec-indicator').classList.add('bg-yellow-500');
     document.getElementById('rec-status-text').innerText = "En pause";
-    document.getElementById('pause-resume-btn').innerText = "🎤 Reprendre";
+    document.getElementById('pause-resume-btn').innerText = "🎙️ Reprendre";
     document.getElementById('preview-voice-btn').classList.remove('hidden');
 }
 
 function togglePauseResumeVoice() {
     if (!mediaRecorder) return;
     if (voiceState === 'recording') {
-        mediaRecorder.pause();
+        if (typeof mediaRecorder.pause === 'function') mediaRecorder.pause();
         voiceState = 'paused';
         setUIStatePaused();
     } else if (voiceState === 'paused') {
         if (previewAudioObj) previewAudioObj.pause();
-        mediaRecorder.resume();
+        if (typeof mediaRecorder.resume === 'function') mediaRecorder.resume();
         voiceState = 'recording';
         setUIStateRecording();
     }
@@ -344,6 +445,7 @@ function cancelVoiceStudio() {
     document.getElementById('voice-studio-bar').classList.add('hidden');
     document.getElementById('normal-input-bar').classList.remove('hidden');
     document.getElementById('rec-badge-global').classList.add('hidden');
+    updateChatActionButton();
 }
 
 function sendFinalVoice() {
@@ -354,12 +456,20 @@ function sendFinalVoice() {
         appendVoiceMessage(url, document.getElementById('rec-timer').innerText);
         if (audioStream) audioStream.getTracks().forEach(t => t.stop());
     };
-    mediaRecorder.stop();
+    if (mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    } else if (audioChunks.length > 0) {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        appendVoiceMessage(url, document.getElementById('rec-timer').innerText);
+        if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+    }
     clearInterval(recTimerInterval);
     voiceState = 'idle';
     document.getElementById('voice-studio-bar').classList.add('hidden');
     document.getElementById('normal-input-bar').classList.remove('hidden');
     document.getElementById('rec-badge-global').classList.add('hidden');
+    updateChatActionButton();
 }
 
 function updateTimerDisplay() {
@@ -378,7 +488,7 @@ function appendVoiceMessage(audioUrl, duration) {
             <button type="button" onclick="playAudio(this, '${audioUrl}')" class="w-10 h-10 bg-black text-accent rounded-full flex items-center justify-center font-bold text-lg">▶️</button>
             <div>
                 <div class="text-xs font-bold flex items-center space-x-2">
-                    <span>Vocal 🎤</span>
+                    <span>Vocal 🎙️</span>
                     <span class="opacity-75 font-mono">(${duration})</span>
                 </div>
                 <span class="text-[9px] opacity-75 block mt-1">${timeStr}</span>
@@ -397,12 +507,13 @@ function playAudio(btn, url) {
 }
 
 function closeChat() {
-    if (voiceState === 'recording' && mediaRecorder) {
+    if (voiceState === 'recording' && mediaRecorder && typeof mediaRecorder.pause === 'function') {
         mediaRecorder.pause();
         voiceState = 'paused';
         setUIStatePaused();
         document.getElementById('rec-badge-global').classList.remove('hidden');
     }
+    document.getElementById('emoji-picker-bar').classList.add('hidden');
     document.getElementById('chat-room').classList.add('hidden');
 }
 
@@ -411,6 +522,7 @@ function openChat(name, status) {
     document.getElementById('chat-contact-status').innerText = status;
     document.getElementById('chat-contact-avatar').innerText = name.charAt(0).toUpperCase();
     document.getElementById('chat-room').classList.remove('hidden');
+    updateChatActionButton();
 }
 
 function switchTab(tabName) {
@@ -434,6 +546,7 @@ function sendChatMessage() {
     div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>${input.value}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
     area.appendChild(div);
     input.value = '';
+    updateChatActionButton();
     area.scrollTop = area.scrollHeight;
 }
 
@@ -508,7 +621,21 @@ const ctx = canvas ? canvas.getContext('2d') : null;
 
 function prepareMediaSend(event) {
     const file = event.target.files[0];
-    if (!file || !ctx) return;
+    if (!file) return;
+
+    if (file.type && !file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        const area = document.getElementById('messages-area');
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const div = document.createElement('div');
+        div.className = 'flex justify-end';
+        div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>📎 Fichier : ${file.name}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
+        area.appendChild(div);
+        area.scrollTop = area.scrollHeight;
+        event.target.value = '';
+        return;
+    }
+
+    if (!ctx) return;
     document.getElementById('media-caption').value = '';
     document.getElementById('media-editor-modal').classList.remove('hidden');
     if (file.type.startsWith('video/')) {
