@@ -9,6 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,12 +28,6 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 34
-          build-tools: "34.0.0"
-
       - name: Install dependencies
         run: npm install
 
@@ -42,6 +40,7 @@ jobs:
 
       - name: Build Debug APK
         run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
