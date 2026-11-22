@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FACC15">
+    <title>LEKEMA - App</title>
+    <link rel="manifest" href="./manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <div id="auth-screen" class="fixed inset-0 bg-[#0d0d0d] z-50 flex flex-col justify-center px-6">
+        <div class="max-w-md w-full mx-auto bg-[#161616] border border-gray-800 p-8 rounded-3xl shadow-2xl">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black text-accent font-lekema">LEKEMA</h1>
+                <p class="text-xs text-gray-400 mt-2">Connexion sécurisée par Gmail & Pseudo</p>
+            </div>
+
+            <div id="step-credentials" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Votre Pseudo Unique</label>
+                    <input type="text" id="username-input" placeholder="Ex: Malik" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-accent focus:outline-none">
+                    <p id="username-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Adresse Gmail</label>
+                    <input type="email" id="gmail-input" placeholder="exemple@gmail.com" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm text-white focus:border-accent focus:outline-none">
+                    <p id="gmail-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                </div>
+                <button onclick="requestGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition mt-2">
+                    Envoyer le code sur Gmail
+                </button>
+            </div>
+
+            <div id="step-otp" class="hidden space-y-4">
+                <div class="bg-black/60 border border-gray-800 rounded-xl p-3 text-xs text-gray-300">
+                    Un code à 6 chiffres a été envoyé pour <span id="otp-target-gmail" class="text-accent font-semibold"></span>. Consultez votre boîte Gmail et saisissez-le ci-dessous.
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Code de confirmation (6 chiffres)</label>
+                    <input type="text" id="otp-input" maxlength="6" inputmode="numeric" placeholder="000000" class="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-center tracking-[0.4em] text-lg font-bold text-white focus:border-accent focus:outline-none">
+                    <p id="otp-error" class="hidden text-[11px] text-red-400 mt-1"></p>
+                </div>
+                <button onclick="verifyGmailCode()" class="w-full bg-accent font-bold py-3.5 rounded-xl shadow-lg hover:opacity-90 transition">
+                    Vérifier et entrer
+                </button>
+                <button onclick="backToCredentials()" class="w-full text-xs text-gray-400 hover:text-white py-2">
+                    ← Modifier le pseudo ou l'adresse Gmail
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden flex-1 flex flex-col h-full">
+        <header class="bg-black/95 border-b border-gray-900 px-3 py-3 flex justify-between items-center z-10">
+            <h1 class="text-xl font-black text-accent font-lekema">LEKEMA</h1>
+            <div class="flex items-center space-x-2">
+                <label class="text-[11px] bg-gray-900 border border-gray-800 px-2.5 py-1.5 rounded-full flex items-center space-x-1 text-white cursor-pointer">
+                    <span>🖼️</span><span>Fond</span>
+                    <input type="file" accept="image/*" onchange="changeMainWallpaper(event)" class="hidden">
+                </label>
+                <button onclick="openThemeModal()" class="text-[11px] bg-gray-900 border border-gray-800 px-2.5 py-1.5 rounded-full flex items-center space-x-1 text-white">
+                    <span>🎨</span><span>Thèmes</span>
+                </button>
+                <button onclick="logoutUser()" title="Déconnexion" class="text-[11px] bg-gray-900 border border-gray-800 px-2 py-1.5 rounded-full text-gray-300 hover:text-red-400">
+                    ⏻
+                </button>
+                <div id="header-avatar" class="w-7 h-7 rounded-full bg-accent font-bold flex items-center justify-center text-xs">M</div>
+            </div>
+        </header>
+
+        <div id="install-app-banner" class="hidden bg-accent px-4 py-2 flex justify-between items-center text-xs font-bold">
+            <span>📲 Installer LEKEMA sur votre téléphone</span>
+            <button onclick="triggerAppInstall()" class="bg-black text-white px-3 py-1 rounded-full">Installer</button>
+        </div>
+
+        <main id="tab-chats" class="flex-1 overflow-y-auto p-3 space-y-2 bg-cover bg-center">
+            <div class="px-2 pb-2 flex justify-between items-center">
+                <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Discussions récentes</span>
+                <span id="rec-badge-global" class="hidden text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold">🎤 Vocal en pause</span>
+            </div>
+            <div onclick="openChat('Sarah K.', 'En ligne')" class="flex items-center justify-between p-3 bg-card/90 backdrop-blur-md hover:opacity-95 rounded-2xl cursor-pointer transition border border-gray-800/70">
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">S</div>
+                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-black rounded-full"></span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Sarah K.</h3>
+                        <p class="text-xs text-gray-300 truncate w-44">Tu lances ton live ce soir ?</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] text-accent font-semibold block">12:50</span>
+                    <span class="inline-block bg-accent text-[10px] font-bold px-2 py-0.5 rounded-full mt-1">2</span>
+                </div>
+            </div>
+        </main>
+
+        <main id="tab-status" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+            <h2 class="text-sm font-bold text-gray-300">Statuts (24h)</h2>
+            <label class="flex items-center space-x-3 p-3 bg-card rounded-2xl border border-dashed border-accent cursor-pointer">
+                <div class="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-xl font-bold">+</div>
+                <div>
+                    <h3 class="font-bold text-sm">Publier un Statut Photo</h3>
+                    <p class="text-xs text-gray-400">Choisir une image de votre galerie</p>
+                </div>
+                <input type="file" accept="image/*" onchange="addMyStatus(event)" class="hidden">
+            </label>
+            <div id="status-grid" class="grid grid-cols-2 gap-3 pt-2">
+                <div onclick="openViewer('image', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600', 'Sarah K. • Il y a 15 min')" class="h-44 rounded-2xl bg-cover bg-center border border-accent p-3 flex flex-col justify-between cursor-pointer" style="background-image: linear-gradient(transparent, rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400');">
+                    <div class="w-8 h-8 rounded-full bg-purple-600 border-2 border-accent flex items-center justify-center text-xs font-bold text-white">S</div>
+                    <div>
+                        <p class="text-xs font-bold text-white">Sarah K.</p>
+                        <span class="text-[10px] text-gray-300">Il y a 15 min</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <main id="tab-live" class="hidden flex-1 overflow-y-auto p-4 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-bold">Amis en Direct 🔴</h2>
+                    <span class="text-[10px] bg-red-600/20 text-red-500 border border-red-500/30 px-2 py-0.5 rounded-full font-semibold">1 Live actif</span>
+                </div>
+                <div class="bg-card border border-gray-800 rounded-3xl p-4">
+                    <div class="flex justify-between items-center mb-10">
+                        <span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full animate-pulse">EN DIRECT</span>
+                        <span class="bg-black/60 text-white text-xs px-2.5 py-1 rounded-full">👁️ 14 amis</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">Sarah K. est en live</h3>
+                        <p class="text-xs text-gray-400 mb-3">Session chill & musique ce soir 🎶</p>
+                        <button onclick="startLiveStream(false)" class="w-full bg-white text-black font-bold py-2.5 rounded-xl text-xs">Rejoindre le Live</button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="startLiveStream(true)" class="w-full bg-accent font-extrabold py-4 rounded-2xl shadow-lg flex items-center justify-center space-x-2 mt-4">
+                <span>📹</span><span>Lancer mon Live maintenant</span>
+            </button>
+        </main>
+
+        <nav class="bg-black border-t border-gray-900 flex justify-around py-2.5">
+            <button onclick="switchTab('chats')" id="nav-chats" class="flex flex-col items-center text-accent">
+                <span class="text-lg">💬</span><span class="text-[10px] font-bold mt-0.5">Discussions</span>
+            </button>
+            <button onclick="switchTab('status')" id="nav-status" class="flex flex-col items-center text-gray-500">
+                <span class="text-lg">⭕</span><span class="text-[10px] font-semibold mt-0.5">Statuts</span>
+            </button>
+            <button onclick="switchTab('live')" id
+              
