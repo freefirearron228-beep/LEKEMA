@@ -1,0 +1,8 @@
+{
+  "appId": "com.lekema.app",
+  "appName": "LEKEMA",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
