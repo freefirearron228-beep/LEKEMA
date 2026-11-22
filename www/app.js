@@ -15,13 +15,15 @@ let pendingAuth = null;
 
 function showFieldError(id, message) {
     const el = document.getElementById(id);
+    if (!el) return;
     el.innerText = message;
     el.classList.remove('hidden');
 }
 
 function clearAuthErrors() {
     ['username-error', 'gmail-error', 'otp-error'].forEach(id => {
-        document.getElementById(id).classList.add('hidden');
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
     });
 }
 
@@ -30,7 +32,7 @@ async function requestGmailCode() {
     const username = document.getElementById('username-input').value.trim();
     const gmail = document.getElementById('gmail-input').value.trim().toLowerCase();
 
-    const pseudoRegex = /^[a-zA-Z0-9À-ÿ ._'-]{3,24}$/;
+    const pseudoRegex = /^[a-zA-Z0-9À-ÿ ._-]{3,24}$/;
     if (!pseudoRegex.test(username)) {
         showFieldError('username-error', "Pseudo invalide (3 à 24 caractères requis).");
         return;
@@ -42,7 +44,7 @@ async function requestGmailCode() {
         return;
     }
 
-    if (LekemaStorage.isPseudoTaken(username, gmail)) {
+    if (window.LekemaStorage && LekemaStorage.isPseudoTaken(username, gmail)) {
         showFieldError('username-error', "Ce pseudo est déjà pris par un autre utilisateur.");
         return;
     }
@@ -97,8 +99,10 @@ function verifyGmailCode() {
         verifiedAt: Date.now()
     };
 
-    LekemaStorage.saveUser(sessionData);
-    LekemaStorage.setSession(sessionData);
+    if (window.LekemaStorage) {
+        LekemaStorage.saveUser(sessionData);
+        LekemaStorage.setSession(sessionData);
+    }
     pendingAuth = null;
     activateMainApp(sessionData);
 }
@@ -118,19 +122,21 @@ function activateMainApp(sessionData) {
 }
 
 function logoutUser() {
-    LekemaStorage.clearSession();
+    if (window.LekemaStorage) {
+        LekemaStorage.clearSession();
+    }
     document.getElementById('main-app').classList.add('hidden');
     document.getElementById('auth-screen').classList.remove('hidden');
     backToCredentials();
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    const savedSession = LekemaStorage.getSession();
+    const savedSession = window.LekemaStorage ? LekemaStorage.getSession() : null;
     if (savedSession && savedSession.username && savedSession.gmail) {
         activateMainApp(savedSession);
     }
 
-    const savedTheme = LekemaStorage.getTheme();
+    const savedTheme = window.LekemaStorage ? LekemaStorage.getTheme() : null;
     if (savedTheme) {
         applyTheme(savedTheme.bgMain, savedTheme.bgCard, savedTheme.accent, savedTheme.accentText, savedTheme.textMain, false);
     }
@@ -397,11 +403,11 @@ function changeChatWallpaper(event) {
 }
 
 const canvas = document.getElementById('edit-canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 
 function prepareMediaSend(event) {
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file || !ctx) return;
     document.getElementById('media-caption').value = '';
     document.getElementById('media-editor-modal').classList.remove('hidden');
     if (file.type.startsWith('video/')) {
@@ -441,21 +447,23 @@ function getPos(e) {
     };
 }
 
-canvas.addEventListener('touchstart', e => { isDrawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); });
-canvas.addEventListener('touchmove', e => {
-    if (!isDrawing) return;
-    e.preventDefault();
-    const pos = getPos(e);
-    ctx.lineWidth = Math.max(12, canvas.width / 35);
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = brushColor;
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-});
-canvas.addEventListener('touchend', () => { isDrawing = false; });
+if (canvas && ctx) {
+    canvas.addEventListener('touchstart', e => { isDrawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); });
+    canvas.addEventListener('touchmove', e => {
+        if (!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineWidth = Math.max(12, canvas.width / 35);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = brushColor;
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    });
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+}
 
 function setBrushColor(c) { brushColor = c; }
-function clearCanvas() { ctx.drawImage(baseImage, 0, 0); }
+function clearCanvas() { if (ctx) ctx.drawImage(baseImage, 0, 0); }
 function closeMediaEditor() { document.getElementById('media-editor-modal').classList.add('hidden'); }
 
 function confirmMediaSend() {
@@ -464,7 +472,7 @@ function confirmMediaSend() {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const div = document.createElement('div');
     div.className = 'flex justify-end';
-    if (currentMediaType === 'image') {
+    if (currentMediaType === 'image' && canvas) {
         const url = canvas.toDataURL('image/jpeg', 0.85);
         div.innerHTML = `<div onclick="openViewer('image', '${url}', '${caption.replace(/'/g, "\\'")}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
     } else {
@@ -497,4 +505,15 @@ function closeViewer() {
 function openThemeModal() { document.getElementById('theme-modal').classList.remove('hidden'); }
 function closeThemeModal() { document.getElementById('theme-modal').classList.add('hidden'); }
 
-functi
+function applyTheme(bgMain, bgCard, accent, accentText, textMain, persist = true) {
+    document.documentElement.style.setProperty('--bg-main', bgMain);
+    document.documentElement.style.setProperty('--bg-card', bgCard);
+    document.documentElement.style.setProperty('--accent-color', accent);
+    document.documentElement.style.setProperty('--accent-text', accentText);
+    document.documentElement.style.setProperty('--text-main', textMain);
+    if (persist && window.LekemaStorage) {
+        LekemaStorage.saveTheme({ bgMain, bgCard, accent, accentText, textMain });
+    }
+    closeThemeModal();
+}
+
