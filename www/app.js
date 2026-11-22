@@ -41,6 +41,11 @@ const EMOJI_CATEGORIES = {
     ]
 };
 
+const DEFAULT_PROFILE_PHOTO = "./file_00000000227881f48510b7ce45188ed5.png";
+const PROFILE_STORAGE_KEY = "lekema_user_profile_v1";
+const PRIVACY_STORAGE_KEY = "lekema_privacy_settings_v1";
+const CONTACTS_STORAGE_KEY = "lekema_contacts_list_v1";
+
 let currentEmojiCategory = 'faces';
 let currentUser = "Moi";
 let currentGmail = "";
@@ -51,6 +56,24 @@ let baseImage = new Image();
 let isDrawing = false;
 let brushColor = '#000000';
 let pendingAuth = null;
+
+let userProfile = {
+    name: "Malik",
+    info: "Disponible sur LEKEMA",
+    handle: "@malik",
+    phone: "",
+    links: "",
+    photo: DEFAULT_PROFILE_PHOTO
+};
+
+let privacySettings = {
+    onlinePresence: true,
+    readReceipts: true
+};
+
+let contactsList = [
+    { id: "sarah", name: "Sarah K.", status: "En ligne", note: "Appuie pour discuter..." }
+];
 
 let activeMessageAudio = null;
 let activeMessageBtn = null;
@@ -65,6 +88,263 @@ let viewerPanStartX = 0;
 let viewerPanStartY = 0;
 let viewerIsPanning = false;
 let viewerLastTapTime = 0;
+
+function loadProfileData() {
+    try {
+        const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            userProfile = Object.assign({}, userProfile, parsed || {});
+        }
+    } catch (e) {}
+
+    try {
+        const rawPriv = localStorage.getItem(PRIVACY_STORAGE_KEY);
+        if (rawPriv) {
+            const parsedPriv = JSON.parse(rawPriv);
+            privacySettings = Object.assign({}, privacySettings, parsedPriv || {});
+        }
+    } catch (e) {}
+
+    try {
+        const rawContacts = localStorage.getItem(CONTACTS_STORAGE_KEY);
+        if (rawContacts) {
+            const parsedContacts = JSON.parse(rawContacts);
+            if (Array.isArray(parsedContacts) && parsedContacts.length > 0) {
+                contactsList = parsedContacts;
+            }
+        }
+    } catch (e) {}
+}
+
+function persistProfileData() {
+    try {
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(userProfile));
+    } catch (e) {}
+}
+
+function persistPrivacyData() {
+    try {
+        localStorage.setItem(PRIVACY_STORAGE_KEY, JSON.stringify(privacySettings));
+    } catch (e) {}
+}
+
+function persistContactsData() {
+    try {
+        localStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(contactsList));
+    } catch (e) {}
+}
+
+function syncProfileAndPrivacyUI() {
+    const displayName = (userProfile.name || currentUser || "LEKEMA").trim();
+    const initial = displayName.charAt(0).toUpperCase() || "M";
+    const photoSrc = userProfile.photo || DEFAULT_PROFILE_PHOTO;
+
+    const centerTitle = document.getElementById('header-center-title');
+    const avatarEl = document.getElementById('header-avatar');
+    const headerPhoto = document.getElementById('header-profile-photo');
+    const onlineStatusEl = document.getElementById('header-online-status');
+
+    if (centerTitle) centerTitle.innerText = displayName;
+    if (avatarEl) avatarEl.innerText = initial;
+    if (headerPhoto) headerPhoto.src = photoSrc;
+
+    if (onlineStatusEl) {
+        if (privacySettings.onlinePresence) {
+            onlineStatusEl.innerText = "En ligne";
+            onlineStatusEl.className = "text-[10px] text-emerald-400 font-semibold block";
+        } else {
+            onlineStatusEl.innerText = "Statut masqué";
+            onlineStatusEl.className = "text-[10px] text-gray-400 font-semibold block";
+        }
+    }
+
+    const pAvatarImg = document.getElementById('profile-page-avatar-img');
+    const pName = document.getElementById('profile-name-input');
+    const pInfo = document.getElementById('profile-info-input');
+    const pHandle = document.getElementById('profile-handle-input');
+    const pPhone = document.getElementById('profile-phone-input');
+    const pLinks = document.getElementById('profile-links-input');
+
+    if (pAvatarImg) pAvatarImg.src = photoSrc;
+    if (pName) pName.value = userProfile.name || "";
+    if (pInfo) pInfo.value = userProfile.info || "";
+    if (pHandle) pHandle.value = userProfile.handle || "";
+    if (pPhone) pPhone.value = userProfile.phone || "";
+    if (pLinks) pLinks.value = userProfile.links || "";
+
+    const onlineCheck = document.getElementById('setting-online-presence');
+    const receiptsCheck = document.getElementById('setting-read-receipts');
+    if (onlineCheck) onlineCheck.checked = Boolean(privacySettings.onlinePresence);
+    if (receiptsCheck) receiptsCheck.checked = Boolean(privacySettings.readReceipts);
+
+    renderContactsLists();
+}
+
+function openProfilePage() {
+    syncProfileAndPrivacyUI();
+    const page = document.getElementById('profile-page');
+    if (page) page.classList.remove('hidden');
+}
+
+function closeProfilePage() {
+    const page = document.getElementById('profile-page');
+    if (page) page.classList.add('hidden');
+}
+
+function changeProfilePhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        userProfile.photo = e.target.result;
+        persistProfileData();
+        syncProfileAndPrivacyUI();
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+function saveProfileDetails() {
+    const pName = document.getElementById('profile-name-input');
+    const pInfo = document.getElementById('profile-info-input');
+    const pHandle = document.getElementById('profile-handle-input');
+    const pPhone = document.getElementById('profile-phone-input');
+    const pLinks = document.getElementById('profile-links-input');
+
+    if (pName && pName.value.trim()) {
+        userProfile.name = pName.value.trim();
+        currentUser = userProfile.name;
+    }
+    if (pInfo) userProfile.info = pInfo.value.trim();
+    if (pHandle) {
+        const rawHandle = pHandle.value.trim();
+        userProfile.handle = rawHandle ? (rawHandle.startsWith('@') ? rawHandle : '@' + rawHandle) : "";
+    }
+    if (pPhone) userProfile.phone = pPhone.value.trim();
+    if (pLinks) userProfile.links = pLinks.value.trim();
+
+    persistProfileData();
+    syncProfileAndPrivacyUI();
+
+    const feedback = document.getElementById('profile-save-feedback');
+    if (feedback) {
+        feedback.classList.remove('hidden');
+        setTimeout(() => feedback.classList.add('hidden'), 1800);
+    }
+}
+
+function openSettingsPage() {
+    syncProfileAndPrivacyUI();
+    const page = document.getElementById('settings-page');
+    if (page) page.classList.remove('hidden');
+}
+
+function closeSettingsPage() {
+    const page = document.getElementById('settings-page');
+    if (page) page.classList.add('hidden');
+}
+
+function savePrivacySettings() {
+    const onlineCheck = document.getElementById('setting-online-presence');
+    const receiptsCheck = document.getElementById('setting-read-receipts');
+    privacySettings.onlinePresence = onlineCheck ? Boolean(onlineCheck.checked) : true;
+    privacySettings.readReceipts = receiptsCheck ? Boolean(receiptsCheck.checked) : true;
+    persistPrivacyData();
+    syncProfileAndPrivacyUI();
+}
+
+function openContactsModal() {
+    renderContactsLists();
+    const modal = document.getElementById('contacts-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeContactsModal() {
+    const modal = document.getElementById('contacts-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function addNewContact() {
+    const inp = document.getElementById('new-contact-name');
+    if (!inp) return;
+    const val = inp.value.trim();
+    if (!val) return;
+    contactsList.unshift({
+        id: "c_" + Date.now(),
+        name: val,
+        status: "En ligne",
+        note: "Appuie pour discuter..."
+    });
+    persistContactsData();
+    inp.value = '';
+    renderContactsLists();
+}
+
+function renderContactsLists() {
+    const chatListEl = document.getElementById('contacts-chat-list');
+    const pickerListEl = document.getElementById('contacts-picker-list');
+
+    if (chatListEl) {
+        chatListEl.innerHTML = contactsList.map(c => {
+            const safeName = c.name.replace(/'/g, "\\'");
+            const initial = (c.name.replace(/^@/, '').charAt(0) || 'C').toUpperCase();
+            return `
+                <div onclick="openChat('${safeName}', '${c.status || 'En ligne'}')" class="bg-card border border-gray-800 rounded-2xl p-3.5 flex items-center space-x-3 cursor-pointer">
+                    <div class="w-11 h-11 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white shrink-0">${initial}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center">
+                            <p class="font-bold text-sm truncate">${c.name}</p>
+                            <span class="text-[10px] text-gray-400">Maintenant</span>
+                        </div>
+                        <p class="text-xs text-gray-400 truncate">${c.note || 'Appuie pour discuter...'}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    if (pickerListEl) {
+        pickerListEl.innerHTML = contactsList.map(c => {
+            const safeName = c.name.replace(/'/g, "\\'");
+            const initial = (c.name.replace(/^@/, '').charAt(0) || 'C').toUpperCase();
+            return `
+                <button type="button" onclick="closeContactsModal(); openChat('${safeName}', '${c.status || 'En ligne'}');" class="w-full bg-card border border-gray-800 rounded-2xl p-3 flex items-center space-x-3 text-left">
+                    <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white shrink-0">${initial}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-sm text-white truncate">${c.name}</p>
+                        <p class="text-xs text-gray-400">${c.status || 'En ligne'}</p>
+                    </div>
+                </button>
+            `;
+        }).join('');
+    }
+}
+
+function getReceiptBadgeHtml(receiptId) {
+    if (!privacySettings.readReceipts) {
+        return `<span id="${receiptId}" class="text-[10px] font-bold text-black/75">✓</span>`;
+    }
+    return `<span id="${receiptId}" class="text-[10px] font-bold text-black/65">✓</span>`;
+}
+
+function scheduleMessageReceipts(receiptId) {
+    if (!privacySettings.readReceipts) return;
+    setTimeout(() => {
+        const el = document.getElementById(receiptId);
+        if (el) {
+            el.innerText = "✓✓";
+            el.className = "text-[10px] font-bold text-black/85";
+        }
+    }, 600);
+    setTimeout(() => {
+        const el = document.getElementById(receiptId);
+        if (el) {
+            el.innerText = "✓✓";
+            el.className = "text-[10px] font-extrabold text-sky-900";
+        }
+    }, 1600);
+}
 
 function showFieldError(id, message) {
     const el = document.getElementById(id);
@@ -173,33 +453,18 @@ function backToCredentials() {
 function activateMainApp(sessionData) {
     currentUser = sessionData.username;
     currentGmail = sessionData.gmail || "";
-    const initial = currentUser.charAt(0).toUpperCase() || "M";
-    const avatarEl = document.getElementById('header-avatar');
-    const modalAvatarEl = document.getElementById('profile-modal-avatar');
-    const modalNameEl = document.getElementById('profile-modal-name');
-    const modalGmailEl = document.getElementById('profile-modal-gmail');
-
-    if (avatarEl) avatarEl.innerText = initial;
-    if (modalAvatarEl) modalAvatarEl.innerText = initial;
-    if (modalNameEl) modalNameEl.innerText = currentUser;
-    if (modalGmailEl) modalGmailEl.innerText = currentGmail || "Compte connecté";
+    if (!userProfile.name || userProfile.name === "Malik") {
+        userProfile.name = currentUser;
+        persistProfileData();
+    }
+    syncProfileAndPrivacyUI();
 
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
 }
 
-function openProfileModal() {
-    const modal = document.getElementById('profile-modal');
-    if (modal) modal.classList.remove('hidden');
-}
-
-function closeProfileModal() {
-    const modal = document.getElementById('profile-modal');
-    if (modal) modal.classList.add('hidden');
-}
-
 function logoutUser() {
-    closeProfileModal();
+    closeProfilePage();
     if (window.LekemaStorage) {
         LekemaStorage.clearSession();
     }
@@ -264,10 +529,24 @@ window.handleAndroidBackButton = function handleAndroidBackButton(e) {
         return true;
     }
 
-    const profileModal = document.getElementById('profile-modal');
-    if (profileModal && !profileModal.classList.contains('hidden')) {
+    const profilePage = document.getElementById('profile-page');
+    if (profilePage && !profilePage.classList.contains('hidden')) {
         if (e && e.preventDefault) e.preventDefault();
-        closeProfileModal();
+        closeProfilePage();
+        return true;
+    }
+
+    const settingsPage = document.getElementById('settings-page');
+    if (settingsPage && !settingsPage.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeSettingsPage();
+        return true;
+    }
+
+    const contactsModal = document.getElementById('contacts-modal');
+    if (contactsModal && !contactsModal.classList.contains('hidden')) {
+        if (e && e.preventDefault) e.preventDefault();
+        closeContactsModal();
         return true;
     }
 
@@ -311,6 +590,9 @@ window.handleAndroidBackButton = function handleAndroidBackButton(e) {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+    loadProfileData();
+    syncProfileAndPrivacyUI();
+
     const sendBtn = document.getElementById('send-code-btn');
     if (sendBtn) {
         sendBtn.addEventListener('click', (e) => {
@@ -1048,6 +1330,7 @@ function updateTimerDisplay() {
 function appendVoiceMessage(audioUrl, duration) {
     const area = document.getElementById('messages-area');
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const receiptId = "rcpt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
     div.className = 'flex justify-end';
     div.innerHTML = `
@@ -1058,11 +1341,15 @@ function appendVoiceMessage(audioUrl, duration) {
                     <span>Vocal 🎤</span>
                     <span class="opacity-75 font-mono">(${duration})</span>
                 </div>
-                <span class="text-[9px] opacity-75 block mt-1">${timeStr}</span>
+                <div class="flex items-center justify-end space-x-1 mt-1">
+                    <span class="text-[9px] opacity-75">${timeStr}</span>
+                    ${getReceiptBadgeHtml(receiptId)}
+                </div>
             </div>
         </div>
     `;
     area.appendChild(div);
+    scheduleMessageReceipts(receiptId);
     area.scrollTop = area.scrollHeight;
 }
 
@@ -1130,7 +1417,7 @@ function closeChat() {
 function openChat(name, status) {
     document.getElementById('chat-contact-name').innerText = name;
     document.getElementById('chat-contact-status').innerText = status;
-    document.getElementById('chat-contact-avatar').innerText = name.charAt(0).toUpperCase();
+    document.getElementById('chat-contact-avatar').innerText = name.replace(/^@/, '').charAt(0).toUpperCase() || 'C';
     document.getElementById('chat-room').classList.remove('hidden');
     updateChatActionButton();
 }
@@ -1151,10 +1438,12 @@ function sendChatMessage() {
     const area = document.getElementById('messages-area');
     if (!input.value.trim()) return;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const receiptId = "rcpt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
     div.className = 'flex justify-end';
-    div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>${input.value}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
+    div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>${input.value}</p><div class="flex items-center justify-end space-x-1 mt-1"><span class="text-[9px] opacity-75">${timeStr}</span>${getReceiptBadgeHtml(receiptId)}</div></div>`;
     area.appendChild(div);
+    scheduleMessageReceipts(receiptId);
     input.value = '';
     updateChatActionButton();
     area.scrollTop = area.scrollHeight;
@@ -1250,10 +1539,12 @@ function prepareMediaSend(event) {
     if (!isVideo && !isImage) {
         const area = document.getElementById('messages-area');
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const receiptId = "rcpt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
         const div = document.createElement('div');
         div.className = 'flex justify-end';
-        div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>📄 Fichier : ${file.name}</p><span class="text-[9px] opacity-75 block text-right mt-1">${timeStr}</span></div>`;
+        div.innerHTML = `<div class="bg-accent p-3 rounded-2xl max-w-[75%] text-sm font-semibold shadow"><p>📄 Fichier : ${file.name}</p><div class="flex items-center justify-end space-x-1 mt-1"><span class="text-[9px] opacity-75">${timeStr}</span>${getReceiptBadgeHtml(receiptId)}</div></div>`;
         area.appendChild(div);
+        scheduleMessageReceipts(receiptId);
         area.scrollTop = area.scrollHeight;
         event.target.value = '';
         return;
@@ -1356,21 +1647,23 @@ function confirmMediaSend() {
     const caption = document.getElementById('media-caption').value.trim();
     const area = document.getElementById('messages-area');
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const receiptId = "rcpt_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     const div = document.createElement('div');
     div.className = 'flex justify-end';
     if (currentMediaType === 'image' && canvas) {
         const url = canvas.toDataURL('image/jpeg', 0.85);
         const safeUrl = encodeURIComponent(url);
         const safeCaption = encodeURIComponent(caption);
-        div.innerHTML = `<div onclick="openEncodedViewer('image', '${safeUrl}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
+        div.innerHTML = `<div onclick="openEncodedViewer('image', '${safeUrl}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer"><img src="${url}" class="rounded-xl max-h-60 object-cover">${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<div class="flex items-center justify-end space-x-1 mt-1 px-1"><span class="text-[9px] opacity-80">${timeStr}</span>${getReceiptBadgeHtml(receiptId)}</div></div>`;
     } else {
         const segmentsToSend = currentVideoSegments.length > 0 ? [...currentVideoSegments] : [currentVideoUrl];
         const firstUrl = segmentsToSend[0] || '';
         const encodedSegments = encodeURIComponent(JSON.stringify(segmentsToSend));
         const safeCaption = encodeURIComponent(caption);
-        div.innerHTML = `<div onclick="openEncodedViewer('video', '${encodedSegments}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${firstUrl}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<span class="text-[9px] opacity-80 block text-right mt-1 px-1">${timeStr}</span></div>`;
+        div.innerHTML = `<div onclick="openEncodedViewer('video', '${encodedSegments}', '${safeCaption}')" class="bg-accent p-1.5 rounded-2xl max-w-[70%] shadow cursor-pointer relative"><video src="${firstUrl}" class="rounded-xl max-h-60 object-cover"></video><div class="absolute inset-0 flex items-center justify-center"><span class="bg-black/60 text-white rounded-full p-3 text-xl">▶️</span></div>${caption ? `<p class="text-xs font-semibold px-1.5 pt-1.5">${caption}</p>` : ''}<div class="flex items-center justify-end space-x-1 mt-1 px-1"><span class="text-[9px] opacity-80">${timeStr}</span>${getReceiptBadgeHtml(receiptId)}</div></div>`;
     }
     area.appendChild(div);
+    scheduleMessageReceipts(receiptId);
     area.scrollTop = area.scrollHeight;
     closeMediaEditor();
 }
