@@ -406,7 +406,7 @@ function setUIStatePaused() {
     document.getElementById('rec-indicator').classList.remove('rec-dot', 'bg-red-500');
     document.getElementById('rec-indicator').classList.add('bg-yellow-500');
     document.getElementById('rec-status-text').innerText = "En pause";
-    document.getElementById('pause-resume-btn').innerText = "🎙️ Reprendre";
+    document.getElementById('pause-resume-btn').innerText = "🎤 Reprendre";
     document.getElementById('preview-voice-btn').classList.remove('hidden');
 }
 
@@ -488,7 +488,7 @@ function appendVoiceMessage(audioUrl, duration) {
             <button type="button" onclick="playAudio(this, '${audioUrl}')" class="w-10 h-10 bg-black text-accent rounded-full flex items-center justify-center font-bold text-lg">▶️</button>
             <div>
                 <div class="text-xs font-bold flex items-center space-x-2">
-                    <span>Vocal 🎙️</span>
+                    <span>Vocal 🎤</span>
                     <span class="opacity-75 font-mono">(${duration})</span>
                 </div>
                 <span class="text-[9px] opacity-75 block mt-1">${timeStr}</span>
