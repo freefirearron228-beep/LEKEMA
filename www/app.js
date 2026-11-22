@@ -224,7 +224,18 @@ function applyMainWallpaperData(dataUrl) {
     }
 }
 
-function handleAndroidBackButton(e) {
+window.handleAndroidBackButton = function handleAndroidBackButton(e) {
+    const stepOtp = document.getElementById('step-otp');
+    const authScreen = document.getElementById('auth-screen');
+    if (authScreen && !authScreen.classList.contains('hidden')) {
+        if (stepOtp && !stepOtp.classList.contains('hidden')) {
+            if (e && e.preventDefault) e.preventDefault();
+            backToCredentials();
+            return true;
+        }
+        return false;
+    }
+
     const camModal = document.getElementById('camera-capture-modal');
     if (camModal && !camModal.classList.contains('hidden')) {
         if (e && e.preventDefault) e.preventDefault();
@@ -297,7 +308,7 @@ function handleAndroidBackButton(e) {
     }
 
     return false;
-}
+};
 
 window.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-code-btn');
@@ -309,16 +320,24 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('backbutton', (e) => {
-        handleAndroidBackButton(e);
+        window.handleAndroidBackButton(e);
     }, false);
+
+    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && typeof window.Capacitor.Plugins.App.addListener === 'function') {
+        window.Capacitor.Plugins.App.addListener('backButton', () => {
+            const handled = window.handleAndroidBackButton(null);
+            if (!handled) {
+                window.Capacitor.Plugins.App.exitApp().catch(() => {});
+            }
+        });
+    }
 
     try {
         window.history.pushState({ lekemaApp: true }, '');
         window.addEventListener('popstate', () => {
-            const handled = handleAndroidBackButton(null);
-            window.history.pushState({ lekemaApp: true }, '');
-            if (!handled && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
-                window.Capacitor.Plugins.App.minimizeApp().catch(() => {});
+            const handled = window.handleAndroidBackButton(null);
+            if (handled) {
+                window.history.pushState({ lekemaApp: true }, '');
             }
         });
     } catch (err) {}
